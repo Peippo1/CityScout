@@ -10,22 +10,30 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
-            LessonsHomeView()
+            NavigationStack {
+                LessonsHomeView()
+            }
                 .tabItem {
                     Label("Lessons", systemImage: "book")
                 }
 
-            PhrasebookHomeView()
+            NavigationStack {
+                PhrasebookHomeView()
+            }
                 .tabItem {
-                    Label("Phrasebook", systemImage: "text.bubble")
+                    Label("Phrasebook", systemImage: "text.book.closed")
                 }
 
-            TranslateHomeView()
+            NavigationStack {
+                TranslateHomeView()
+            }
                 .tabItem {
                     Label("Translate", systemImage: "globe")
                 }
 
-            ExploreHomeView()
+            NavigationStack {
+                ExploreHomeView()
+            }
                 .tabItem {
                     Label("Explore", systemImage: "map")
                 }
