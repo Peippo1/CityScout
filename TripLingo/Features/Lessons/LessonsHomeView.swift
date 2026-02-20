@@ -2,11 +2,14 @@ import SwiftUI
 import SwiftData
 
 struct LessonsHomeView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\Trip.createdAt, order: .forward)])
     private var trips: [Trip]
 
     @Query(sort: [SortDescriptor(\Situation.sortOrder, order: .forward), SortDescriptor(\Situation.title, order: .forward)])
     private var situations: [Situation]
+    @State private var showResetConfirm = false
+    private let seedKey = "didImportSeed_barcelona_seed_v1"
 
     private var barcelonaTrip: Trip? {
         trips.first(where: { $0.destinationName.caseInsensitiveCompare("Barcelona") == .orderedSame }) ?? trips.first
@@ -58,6 +61,27 @@ struct LessonsHomeView: View {
             }
         }
         .navigationTitle("Lessons")
+        .toolbar {
+            #if DEBUG
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showResetConfirm = true
+                } label: {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                }
+            }
+            #endif
+        }
+        .confirmationDialog(
+            "Reset seed data and saved phrases?",
+            isPresented: $showResetConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Reset", role: .destructive) {
+                resetData()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 }
 
@@ -91,5 +115,30 @@ private extension LessonsHomeView {
 
         try? context.save()
         return container
+    }
+}
+
+private extension LessonsHomeView {
+    func resetData() {
+        UserDefaults.standard.set(false, forKey: seedKey)
+
+        do {
+            let saved = try modelContext.fetch(FetchDescriptor<SavedPhrase>())
+            saved.forEach { modelContext.delete($0) }
+
+            // Optional: clear all seed content too for full reseed
+            let phrases = try modelContext.fetch(FetchDescriptor<Phrase>())
+            phrases.forEach { modelContext.delete($0) }
+
+            let situations = try modelContext.fetch(FetchDescriptor<Situation>())
+            situations.forEach { modelContext.delete($0) }
+
+            let trips = try modelContext.fetch(FetchDescriptor<Trip>())
+            trips.forEach { modelContext.delete($0) }
+
+            try modelContext.save()
+        } catch {
+            assertionFailure("Reset failed: \(error.localizedDescription)")
+        }
     }
 }
