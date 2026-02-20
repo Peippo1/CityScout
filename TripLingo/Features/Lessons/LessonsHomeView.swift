@@ -65,7 +65,7 @@ struct LessonsHomeView: View {
     NavigationStack {
         LessonsHomeView()
     }
-    .modelContainer(Self.previewContainer)
+    .modelContainer(LessonsHomeView.previewContainer)
 }
 
 private extension LessonsHomeView {

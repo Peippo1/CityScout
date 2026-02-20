@@ -43,48 +43,30 @@ struct PhraseDetailView: View {
     }
 
     private func refreshSavedState() {
-        let targetText = phrase.targetText
-        let destination = destinationName
-        let situation = situationTitle
-        let descriptor = FetchDescriptor<SavedPhrase>(
-            predicate: #Predicate { saved in
-                saved.targetText == targetText &&
-                saved.destinationName == destination &&
-                saved.situationTitle == situation
-            }
+        isSaved = SavedPhraseService.isSaved(
+            modelContext: modelContext,
+            destinationName: destinationName,
+            situationTitle: situationTitle,
+            targetText: phrase.targetText
         )
-
-        do {
-            isSaved = try modelContext.fetch(descriptor).isEmpty == false
-        } catch {
-            isSaved = false
-        }
     }
 
     private func savePhrase() {
-        let targetText = phrase.targetText
-        let destination = destinationName
-        let situation = situationTitle
-        let descriptor = FetchDescriptor<SavedPhrase>(
-            predicate: #Predicate { saved in
-                saved.targetText == targetText &&
-                saved.destinationName == destination &&
-                saved.situationTitle == situation
-            }
-        )
-
         do {
-            if try modelContext.fetch(descriptor).isEmpty {
-                let saved = SavedPhrase(
-                    targetText: phrase.targetText,
-                    englishMeaning: phrase.englishMeaning,
-                    destinationName: destinationName,
-                    situationTitle: situationTitle
-                )
-                modelContext.insert(saved)
-                try modelContext.save()
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            let inserted = try SavedPhraseService.saveIfNeeded(
+                modelContext: modelContext,
+                destinationName: destinationName,
+                situationTitle: situationTitle,
+                targetText: phrase.targetText,
+                englishMeaning: phrase.englishMeaning
+            )
+
+            if inserted == false {
+                isSaved = true
+                return
             }
+
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             refreshSavedState()
         } catch {
             assertionFailure("Failed to save phrase: \(error.localizedDescription)")
@@ -93,14 +75,35 @@ struct PhraseDetailView: View {
 }
 
 #Preview {
-    NavigationStack {
+    let container = try! ModelContainer(
+        for: Trip.self, Situation.self, Phrase.self, SavedPhrase.self,
+        configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
+
+    let context = container.mainContext
+
+    let trip = Trip(destinationName: "Barcelona", baseLanguage: "English", targetLanguage: "Spanish")
+    let situation = Situation(trip: trip, title: "Café", sortOrder: 0)
+    let phrase = Phrase(
+        situation: situation,
+        targetText: "Un café con leche, por favor.",
+        englishMeaning: "A coffee with milk, please.",
+        notes: "Polite and common in cafes.",
+        tagsCSV: "cafe,food"
+    )
+
+    context.insert(trip)
+    context.insert(situation)
+    context.insert(phrase)
+
+    return NavigationStack {
         PhraseDetailView(
-            phrase: previewPhrase,
+            phrase: phrase,
             destinationName: "Barcelona",
             situationTitle: "Café"
         )
     }
-    .modelContainer(Self.previewContainer)
+    .modelContainer(container)
 }
 
 private extension PhraseDetailView {
@@ -133,3 +136,4 @@ private extension PhraseDetailView {
         return try! previewContainer.mainContext.fetch(descriptor).first!
     }
 }
+    

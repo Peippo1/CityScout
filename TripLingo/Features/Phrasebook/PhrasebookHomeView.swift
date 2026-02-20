@@ -13,7 +13,7 @@ struct PhrasebookHomeView: View {
                 ContentUnavailableView(
                     "No Saved Phrases",
                     systemImage: "text.book.closed",
-                    description: Text("Save a phrase in Lessons to build your phrasebook.")
+                    description: Text("Save a phrase from Lessons to see it here.")
                 )
             } else {
                 List {
@@ -38,8 +38,10 @@ struct PhrasebookHomeView: View {
         }
         .navigationTitle("Phrasebook")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                EditButton()
+            if !savedPhrases.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    EditButton()
+                }
             }
         }
     }
