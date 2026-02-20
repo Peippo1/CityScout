@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct PhraseDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -31,6 +32,7 @@ struct PhraseDetailView: View {
                 Button(isSaved ? "Saved" : "Save to Phrasebook") {
                     savePhrase()
                 }
+                .buttonStyle(.borderedProminent)
                 .disabled(isSaved)
             }
         }
@@ -81,10 +83,53 @@ struct PhraseDetailView: View {
                 )
                 modelContext.insert(saved)
                 try modelContext.save()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
-            isSaved = true
+            refreshSavedState()
         } catch {
             assertionFailure("Failed to save phrase: \(error.localizedDescription)")
         }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        PhraseDetailView(
+            phrase: previewPhrase,
+            destinationName: "Barcelona",
+            situationTitle: "Café"
+        )
+    }
+    .modelContainer(Self.previewContainer)
+}
+
+private extension PhraseDetailView {
+    static let previewContainer: ModelContainer = {
+        let schema = Schema([Trip.self, Situation.self, Phrase.self, SavedPhrase.self])
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: [configuration])
+        let context = container.mainContext
+
+        let trip = Trip(destinationName: "Barcelona", baseLanguage: "English", targetLanguage: "Spanish")
+        let situation = Situation(trip: trip, title: "Café", sortOrder: 0)
+        let phrase = Phrase(
+            situation: situation,
+            targetText: "Un café con leche, por favor.",
+            englishMeaning: "A coffee with milk, please.",
+            notes: "Polite and common in cafes.",
+            tagsCSV: "food,polite"
+        )
+
+        context.insert(trip)
+        context.insert(situation)
+        context.insert(phrase)
+
+        try? context.save()
+        return container
+    }()
+
+    static var previewPhrase: Phrase {
+        let descriptor = FetchDescriptor<Phrase>()
+        return try! previewContainer.mainContext.fetch(descriptor).first!
     }
 }
