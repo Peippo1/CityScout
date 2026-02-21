@@ -7,21 +7,19 @@ struct SituationDetailView: View {
     let situation: Situation
     let destinationName: String
 
-    // Fetch phrases for this situation
-    @Query private var phrases: [Phrase]
+    @Query(sort: [SortDescriptor(\Phrase.targetText, order: .forward)])
+    private var allPhrases: [Phrase]
+    @State private var didCompleteInitialLoad = false
+
+    private var phrases: [Phrase] {
+        let situationID = situation.id
+        return allPhrases.filter { $0.situation.id == situationID }
+    }
 
     init(situation: Situation, destinationName: String) {
         self.situation = situation
         self.destinationName = destinationName
-
-        let situationID = situation.id
-
-        self._phrases = Query(
-            filter: #Predicate<Phrase> { phrase in
-                phrase.situation.id == situationID
-            },
-            sort: [SortDescriptor(\Phrase.targetText, order: .forward)]
-        )
+        debugLog("SituationDetailView init for situation '\(situation.title)' (\(situation.id.uuidString))")
     }
 
     var body: some View {
@@ -80,6 +78,12 @@ struct SituationDetailView: View {
             }
         }
         .navigationTitle(situation.title)
+        .task {
+            guard didCompleteInitialLoad == false else { return }
+            didCompleteInitialLoad = true
+            debugLog("SituationDetailView loaded \(phrases.count) phrases for situation \(situation.id.uuidString)")
+        }
+        .debugSafetyTimeout("SituationDetailView(\(situation.id.uuidString))", completed: $didCompleteInitialLoad)
     }
 
     private func tags(from csv: String) -> [String] {

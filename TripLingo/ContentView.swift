@@ -45,7 +45,9 @@ struct ContentView: View {
         .task {
             guard !didRunSeed else { return }
             didRunSeed = true
-            SeedBootstrapper.run(in: modelContext)
+            await MainActor.run {
+                SeedBootstrapper.run(in: modelContext)
+            }
         }
     }
 }

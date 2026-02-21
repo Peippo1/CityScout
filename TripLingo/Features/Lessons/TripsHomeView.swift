@@ -26,6 +26,11 @@ struct TripsHomeView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .simultaneousGesture(
+                        TapGesture().onEnded {
+                            debugLog("Trip tapped: \(trip.destinationName) (\(trip.id.uuidString))")
+                        }
+                    )
                 }
             }
         }
