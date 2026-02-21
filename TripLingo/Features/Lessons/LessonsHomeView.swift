@@ -2,62 +2,9 @@ import SwiftUI
 import SwiftData
 
 struct LessonsHomeView: View {
-    @Query(sort: [SortDescriptor(\Trip.createdAt, order: .forward)])
-    private var trips: [Trip]
-
-    @Query(sort: [SortDescriptor(\Situation.sortOrder, order: .forward), SortDescriptor(\Situation.title, order: .forward)])
-    private var situations: [Situation]
-
-    private var barcelonaTrip: Trip? {
-        trips.first(where: { $0.destinationName.caseInsensitiveCompare("Barcelona") == .orderedSame }) ?? trips.first
-    }
-
-    private var barcelonaSituations: [Situation] {
-        guard let trip = barcelonaTrip else { return [] }
-        return situations.filter { $0.trip == trip }
-    }
-
     var body: some View {
-        List {
-            if let trip = barcelonaTrip {
-                if barcelonaSituations.isEmpty {
-                    ContentUnavailableView(
-                        "No Situations Found",
-                        systemImage: "exclamationmark.triangle",
-                        description: Text("Barcelona seed content appears to be missing situation data.")
-                    )
-                } else {
-                    Section {
-                        ForEach(barcelonaSituations) { situation in
-                            NavigationLink {
-                                SituationDetailView(situation: situation, destinationName: trip.destinationName)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(situation.title)
-                                    Text("Micro-lesson")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    } header: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(trip.destinationName)
-                            Text("Situation-based micro-lessons")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            } else {
-                ContentUnavailableView(
-                    "No Lessons Yet",
-                    systemImage: "book.closed",
-                    description: Text("Seed content will appear after app startup.")
-                )
-            }
-        }
-        .navigationTitle("Lessons")
+        TripsHomeView()
+            .navigationTitle("Lessons")
     }
 }
 
