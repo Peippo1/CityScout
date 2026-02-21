@@ -15,10 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
-
-      - name: Show Xcode version
+      - name: Xcode version
         run: xcodebuild -version
 
       - name: List schemes
@@ -26,17 +23,20 @@ jobs:
 
       - name: Build (Simulator)
         run: |
+          set -o pipefail
           xcodebuild \
             -project TripLingo.xcodeproj \
             -scheme TripLingo \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
             -configuration Debug \
-            clean build
+            -destination 'platform=iOS Simulator,name=iPhone 16e' \
+            clean build | xcpretty
 
       - name: Test (Simulator)
         run: |
+          set -o pipefail
           xcodebuild \
             -project TripLingo.xcodeproj \
             -scheme TripLingo \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
-            test
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16e' \
+            test | xcpretty
