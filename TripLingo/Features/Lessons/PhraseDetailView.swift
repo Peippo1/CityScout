@@ -39,6 +39,12 @@ struct PhraseDetailView: View {
         .navigationTitle("Phrase")
         .onAppear {
             refreshSavedState()
+            try? SavedPhraseService.markPracticed(
+                modelContext: modelContext,
+                destinationName: destinationName,
+                situationTitle: situationTitle,
+                targetText: phrase.targetText
+            )
         }
     }
 

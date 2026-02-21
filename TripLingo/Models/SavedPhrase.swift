@@ -9,6 +9,7 @@ final class SavedPhrase {
     var englishMeaning: String
     var destinationName: String
     var situationTitle: String
+    var lastPracticedAt: Date?
 
     init(
         id: UUID = UUID(),
@@ -16,7 +17,8 @@ final class SavedPhrase {
         targetText: String,
         englishMeaning: String,
         destinationName: String,
-        situationTitle: String
+        situationTitle: String,
+        lastPracticedAt: Date? = nil
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -24,5 +26,6 @@ final class SavedPhrase {
         self.englishMeaning = englishMeaning
         self.destinationName = destinationName
         self.situationTitle = situationTitle
+        self.lastPracticedAt = lastPracticedAt
     }
 }
