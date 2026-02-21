@@ -2,14 +2,14 @@ name: iOS (TripLingo)
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: ["dev"]
   pull_request:
-    branches: [ "dev" ]
+    branches: ["dev"]
   workflow_dispatch:
 
 jobs:
   build-and-test:
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Checkout
@@ -18,25 +18,40 @@ jobs:
       - name: Xcode version
         run: xcodebuild -version
 
+      - name: List runtimes and devices
+        run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices
+
       - name: List schemes
         run: xcodebuild -list -project TripLingo.xcodeproj
 
+      # Create + boot a known-good simulator (iPhone 15 is commonly available)
+      - name: Create and boot simulator
+        run: |
+          RUNTIME_ID=$(xcrun simctl list runtimes | grep -E "iOS.*com.apple.CoreSimulator.SimRuntime.iOS" | tail -n 1 | sed -E 's/.*(com.apple.CoreSimulator.SimRuntime.iOS[^ ]*).*/\1/')
+          echo "Using runtime: $RUNTIME_ID"
+          DEVICE_ID=$(xcrun simctl create "CI-iPhone" "iPhone 15" "$RUNTIME_ID")
+          echo "Created device: $DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+
       - name: Build (Simulator)
         run: |
-          set -o pipefail
           xcodebuild \
             -project TripLingo.xcodeproj \
             -scheme TripLingo \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16e' \
-            clean build | xcpretty
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=CI-iPhone" \
+            clean build
 
       - name: Test (Simulator)
         run: |
-          set -o pipefail
           xcodebuild \
             -project TripLingo.xcodeproj \
             -scheme TripLingo \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16e' \
-            test | xcpretty
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=CI-iPhone" \
+            test

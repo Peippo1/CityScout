@@ -6,6 +6,11 @@ struct PhrasebookHomeView: View {
 
     @Query(sort: [SortDescriptor(\SavedPhrase.createdAt, order: .reverse)])
     private var savedPhrases: [SavedPhrase]
+    @Query(
+        filter: #Predicate { $0.lastPracticedAt != nil },
+        sort: [SortDescriptor(\SavedPhrase.lastPracticedAt, order: .reverse)]
+    )
+    private var recentPracticed: [SavedPhrase]
 
     var body: some View {
         Group {
@@ -17,6 +22,26 @@ struct PhrasebookHomeView: View {
                 )
             } else {
                 List {
+                    if !recentPracticed.isEmpty {
+                        Section("Recently Practiced") {
+                            ForEach(recentPracticed.prefix(5)) { savedPhrase in
+                                NavigationLink {
+                                    SavedPhraseDetailView(savedPhrase: savedPhrase)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(savedPhrase.targetText)
+                                            .font(.headline)
+                                        Text(savedPhrase.englishMeaning)
+                                            .foregroundStyle(.secondary)
+                                        Text("\(savedPhrase.destinationName) • \(savedPhrase.situationTitle)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     ForEach(savedPhrases) { savedPhrase in
                         NavigationLink {
                             SavedPhraseDetailView(savedPhrase: savedPhrase)

@@ -1,0 +1,75 @@
+{
+  "destination": "Paris",
+  "languages": ["French"],
+  "situations": [
+    {
+      "title": "Café",
+      "phrases": [
+        {
+          "targetText": "Un café, s'il vous plaît.",
+          "englishMeaning": "A coffee, please.",
+          "notes": "Polite and very common.",
+          "tags": ["food", "polite"]
+        },
+        {
+          "targetText": "Je voudrais un croissant.",
+          "englishMeaning": "I would like a croissant.",
+          "notes": "'Je voudrais' is a polite way to order.",
+          "tags": ["food"]
+        },
+        {
+          "targetText": "L'addition, s'il vous plaît.",
+          "englishMeaning": "The bill, please.",
+          "notes": "Use when you're ready to pay.",
+          "tags": ["polite"]
+        }
+      ]
+    },
+    {
+      "title": "Metro",
+      "phrases": [
+        {
+          "targetText": "Où est la station de métro la plus proche ?",
+          "englishMeaning": "Where is the nearest metro station?",
+          "notes": "Useful for getting around quickly.",
+          "tags": ["directions"]
+        },
+        {
+          "targetText": "Un ticket, s'il vous plaît.",
+          "englishMeaning": "A ticket, please.",
+          "notes": "Simple and effective at kiosks.",
+          "tags": ["transport", "polite"]
+        },
+        {
+          "targetText": "Je dois changer à quelle station ?",
+          "englishMeaning": "Which station do I need to change at?",
+          "notes": "Handy when following a route.",
+          "tags": ["transport"]
+        }
+      ]
+    },
+    {
+      "title": "Hotel",
+      "phrases": [
+        {
+          "targetText": "J'ai une réservation au nom de Finch.",
+          "englishMeaning": "I have a reservation under the name Finch.",
+          "notes": "Swap the name as needed.",
+          "tags": ["check-in"]
+        },
+        {
+          "targetText": "À quelle heure est le petit-déjeuner ?",
+          "englishMeaning": "What time is breakfast?",
+          "notes": "Good for hotel basics.",
+          "tags": ["hotel"]
+        },
+        {
+          "targetText": "Puis-je avoir la clé, s'il vous plaît ?",
+          "englishMeaning": "Can I have the key, please?",
+          "notes": "Polite request at reception.",
+          "tags": ["hotel", "polite"]
+        }
+      ]
+    }
+  ]
+}
