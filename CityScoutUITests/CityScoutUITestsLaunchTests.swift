@@ -1,13 +1,13 @@
 //
-//  TripLingoUITestsLaunchTests.swift
-//  TripLingoUITests
+//  CityScoutUITestsLaunchTests.swift
+//  CityScoutUITests
 //
 //  Created by Tim Finch on 15/02/2026.
 //
 
 import XCTest
 
-final class TripLingoUITestsLaunchTests: XCTestCase {
+final class CityScoutUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

@@ -1,13 +1,13 @@
 //
-//  TripLingoUITests.swift
-//  TripLingoUITests
+//  CityScoutUITests.swift
+//  CityScoutUITests
 //
 //  Created by Tim Finch on 15/02/2026.
 //
 
 import XCTest
 
-final class TripLingoUITests: XCTestCase {
+final class CityScoutUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

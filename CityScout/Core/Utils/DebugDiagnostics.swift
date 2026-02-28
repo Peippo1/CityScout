@@ -6,7 +6,7 @@ func debugLog(
     file: StaticString = #fileID,
     line: UInt = #line
 ) {
-    print("[TripLingo DEBUG] \(file):\(line) - \(message)")
+    print("[CityScout DEBUG] \(file):\(line) - \(message)")
 }
 
 private struct DebugSafetyTimeoutModifier: ViewModifier {

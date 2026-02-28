@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  TripLingo
+//  CityScout
 //
 //  Created by Tim Finch on 15/02/2026.
 //
