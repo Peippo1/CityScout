@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "220255E82F42320A00976ACE"
-               BuildableName = "TripLingo.app"
-               BlueprintName = "TripLingo"
-               ReferencedContainer = "container:TripLingo.xcodeproj">
+               BuildableName = "CityScout.app"
+               BlueprintName = "CityScout"
+               ReferencedContainer = "container:CityScout.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -36,9 +36,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "220255F72F42320C00976ACE"
-               BuildableName = "TripLingoTests.xctest"
-               BlueprintName = "TripLingoTests"
-               ReferencedContainer = "container:TripLingo.xcodeproj">
+               BuildableName = "CityScoutTests.xctest"
+               BlueprintName = "CityScoutTests"
+               ReferencedContainer = "container:CityScout.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -47,9 +47,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "220256012F42320C00976ACE"
-               BuildableName = "TripLingoUITests.xctest"
-               BlueprintName = "TripLingoUITests"
-               ReferencedContainer = "container:TripLingo.xcodeproj">
+               BuildableName = "CityScoutUITests.xctest"
+               BlueprintName = "CityScoutUITests"
+               ReferencedContainer = "container:CityScout.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -69,9 +69,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "220255E82F42320A00976ACE"
-            BuildableName = "TripLingo.app"
-            BlueprintName = "TripLingo"
-            ReferencedContainer = "container:TripLingo.xcodeproj">
+            BuildableName = "CityScout.app"
+            BlueprintName = "CityScout"
+            ReferencedContainer = "container:CityScout.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -86,9 +86,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "220255E82F42320A00976ACE"
-            BuildableName = "TripLingo.app"
-            BlueprintName = "TripLingo"
-            ReferencedContainer = "container:TripLingo.xcodeproj">
+            BuildableName = "CityScout.app"
+            BlueprintName = "CityScout"
+            ReferencedContainer = "container:CityScout.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

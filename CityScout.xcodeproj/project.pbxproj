@@ -12,37 +12,37 @@
 			containerPortal = 220255E12F42320A00976ACE /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 220255E82F42320A00976ACE;
-			remoteInfo = TripLingo;
+			remoteInfo = CityScout;
 		};
 		220256032F42320C00976ACE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 220255E12F42320A00976ACE /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 220255E82F42320A00976ACE;
-			remoteInfo = TripLingo;
+			remoteInfo = CityScout;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		220255E92F42320A00976ACE /* TripLingo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TripLingo.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		220255F82F42320C00976ACE /* TripLingoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TripLingoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		220256022F42320C00976ACE /* TripLingoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TripLingoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		220255E92F42320A00976ACE /* CityScout.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CityScout.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		220255F82F42320C00976ACE /* CityScoutTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CityScoutTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		220256022F42320C00976ACE /* CityScoutUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CityScoutUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		220255EB2F42320A00976ACE /* TripLingo */ = {
+		220255EB2F42320A00976ACE /* CityScout */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TripLingo;
+			path = CityScout;
 			sourceTree = "<group>";
 		};
-		220255FB2F42320C00976ACE /* TripLingoTests */ = {
+		220255FB2F42320C00976ACE /* CityScoutTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TripLingoTests;
+			path = CityScoutTests;
 			sourceTree = "<group>";
 		};
-		220256052F42320C00976ACE /* TripLingoUITests */ = {
+		220256052F42320C00976ACE /* CityScoutUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TripLingoUITests;
+			path = CityScoutUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		220255E02F42320A00976ACE = {
 			isa = PBXGroup;
 			children = (
-				220255EB2F42320A00976ACE /* TripLingo */,
-				220255FB2F42320C00976ACE /* TripLingoTests */,
-				220256052F42320C00976ACE /* TripLingoUITests */,
+				220255EB2F42320A00976ACE /* CityScout */,
+				220255FB2F42320C00976ACE /* CityScoutTests */,
+				220256052F42320C00976ACE /* CityScoutUITests */,
 				220255EA2F42320A00976ACE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +85,9 @@
 		220255EA2F42320A00976ACE /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				220255E92F42320A00976ACE /* TripLingo.app */,
-				220255F82F42320C00976ACE /* TripLingoTests.xctest */,
-				220256022F42320C00976ACE /* TripLingoUITests.xctest */,
+				220255E92F42320A00976ACE /* CityScout.app */,
+				220255F82F42320C00976ACE /* CityScoutTests.xctest */,
+				220256022F42320C00976ACE /* CityScoutUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		220255E82F42320A00976ACE /* TripLingo */ = {
+		220255E82F42320A00976ACE /* CityScout */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2202560C2F42320C00976ACE /* Build configuration list for PBXNativeTarget "TripLingo" */;
+			buildConfigurationList = 2202560C2F42320C00976ACE /* Build configuration list for PBXNativeTarget "CityScout" */;
 			buildPhases = (
 				220255E52F42320A00976ACE /* Sources */,
 				220255E62F42320A00976ACE /* Frameworks */,
@@ -108,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				220255EB2F42320A00976ACE /* TripLingo */,
+				220255EB2F42320A00976ACE /* CityScout */,
 			);
-			name = TripLingo;
+			name = CityScout;
 			packageProductDependencies = (
 			);
-			productName = TripLingo;
-			productReference = 220255E92F42320A00976ACE /* TripLingo.app */;
+			productName = CityScout;
+			productReference = 220255E92F42320A00976ACE /* CityScout.app */;
 			productType = "com.apple.product-type.application";
 		};
-		220255F72F42320C00976ACE /* TripLingoTests */ = {
+		220255F72F42320C00976ACE /* CityScoutTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2202560F2F42320C00976ACE /* Build configuration list for PBXNativeTarget "TripLingoTests" */;
+			buildConfigurationList = 2202560F2F42320C00976ACE /* Build configuration list for PBXNativeTarget "CityScoutTests" */;
 			buildPhases = (
 				220255F42F42320C00976ACE /* Sources */,
 				220255F52F42320C00976ACE /* Frameworks */,
@@ -131,18 +131,18 @@
 				220255FA2F42320C00976ACE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				220255FB2F42320C00976ACE /* TripLingoTests */,
+				220255FB2F42320C00976ACE /* CityScoutTests */,
 			);
-			name = TripLingoTests;
+			name = CityScoutTests;
 			packageProductDependencies = (
 			);
-			productName = TripLingoTests;
-			productReference = 220255F82F42320C00976ACE /* TripLingoTests.xctest */;
+			productName = CityScoutTests;
+			productReference = 220255F82F42320C00976ACE /* CityScoutTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		220256012F42320C00976ACE /* TripLingoUITests */ = {
+		220256012F42320C00976ACE /* CityScoutUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 220256122F42320C00976ACE /* Build configuration list for PBXNativeTarget "TripLingoUITests" */;
+			buildConfigurationList = 220256122F42320C00976ACE /* Build configuration list for PBXNativeTarget "CityScoutUITests" */;
 			buildPhases = (
 				220255FE2F42320C00976ACE /* Sources */,
 				220255FF2F42320C00976ACE /* Frameworks */,
@@ -154,13 +154,13 @@
 				220256042F42320C00976ACE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				220256052F42320C00976ACE /* TripLingoUITests */,
+				220256052F42320C00976ACE /* CityScoutUITests */,
 			);
-			name = TripLingoUITests;
+			name = CityScoutUITests;
 			packageProductDependencies = (
 			);
-			productName = TripLingoUITests;
-			productReference = 220256022F42320C00976ACE /* TripLingoUITests.xctest */;
+			productName = CityScoutUITests;
+			productReference = 220256022F42320C00976ACE /* CityScoutUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 220255E42F42320A00976ACE /* Build configuration list for PBXProject "TripLingo" */;
+			buildConfigurationList = 220255E42F42320A00976ACE /* Build configuration list for PBXProject "CityScout" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				220255E82F42320A00976ACE /* TripLingo */,
-				220255F72F42320C00976ACE /* TripLingoTests */,
-				220256012F42320C00976ACE /* TripLingoUITests */,
+				220255E82F42320A00976ACE /* CityScout */,
+				220255F72F42320C00976ACE /* CityScoutTests */,
+				220256012F42320C00976ACE /* CityScoutUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		220255FA2F42320C00976ACE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 220255E82F42320A00976ACE /* TripLingo */;
+			target = 220255E82F42320A00976ACE /* CityScout */;
 			targetProxy = 220255F92F42320C00976ACE /* PBXContainerItemProxy */;
 		};
 		220256042F42320C00976ACE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 220255E82F42320A00976ACE /* TripLingo */;
+			target = 220255E82F42320A00976ACE /* CityScout */;
 			targetProxy = 220256032F42320C00976ACE /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -411,7 +411,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.TripLingo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.CityScout;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -444,7 +444,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.TripLingo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.CityScout;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -466,7 +466,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.TripLingoTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.CityScoutTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -474,7 +474,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TripLingo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TripLingo";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CityScout.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CityScout";
 			};
 			name = Debug;
 		};
@@ -488,7 +488,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.TripLingoTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.CityScoutTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -496,7 +496,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TripLingo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TripLingo";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CityScout.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CityScout";
 			};
 			name = Release;
 		};
@@ -508,7 +508,7 @@
 				DEVELOPMENT_TEAM = 7R7D9B87LW;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.TripLingoUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.CityScoutUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -516,7 +516,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = TripLingo;
+				TEST_TARGET_NAME = CityScout;
 			};
 			name = Debug;
 		};
@@ -528,7 +528,7 @@
 				DEVELOPMENT_TEAM = 7R7D9B87LW;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.TripLingoUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.finchworks.CityScoutUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -536,14 +536,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = TripLingo;
+				TEST_TARGET_NAME = CityScout;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		220255E42F42320A00976ACE /* Build configuration list for PBXProject "TripLingo" */ = {
+		220255E42F42320A00976ACE /* Build configuration list for PBXProject "CityScout" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2202560A2F42320C00976ACE /* Debug */,
@@ -552,7 +552,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2202560C2F42320C00976ACE /* Build configuration list for PBXNativeTarget "TripLingo" */ = {
+		2202560C2F42320C00976ACE /* Build configuration list for PBXNativeTarget "CityScout" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2202560D2F42320C00976ACE /* Debug */,
@@ -561,7 +561,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2202560F2F42320C00976ACE /* Build configuration list for PBXNativeTarget "TripLingoTests" */ = {
+		2202560F2F42320C00976ACE /* Build configuration list for PBXNativeTarget "CityScoutTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				220256102F42320C00976ACE /* Debug */,
@@ -570,7 +570,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		220256122F42320C00976ACE /* Build configuration list for PBXNativeTarget "TripLingoUITests" */ = {
+		220256122F42320C00976ACE /* Build configuration list for PBXNativeTarget "CityScoutUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				220256132F42320C00976ACE /* Debug */,

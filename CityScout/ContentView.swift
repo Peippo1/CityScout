@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  TripLingo
+//  CityScout
 //
 //  Created by Tim Finch on 15/02/2026.
 //
@@ -40,6 +40,13 @@ struct ContentView: View {
             }
             .tabItem {
                 Label("Explore", systemImage: "map")
+            }
+
+            NavigationStack {
+                MapHomeView()
+            }
+            .tabItem {
+                Label("Map", systemImage: "map")
             }
         }
         .task {

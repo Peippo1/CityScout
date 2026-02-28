@@ -1,4 +1,4 @@
-name: iOS (TripLingo)
+name: iOS (CityScout)
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           xcrun simctl list devices
 
       - name: List schemes
-        run: xcodebuild -list -project TripLingo.xcodeproj
+        run: xcodebuild -list -project CityScout.xcodeproj
 
       # Create + boot a known-good simulator (iPhone 15 is commonly available)
       - name: Create and boot simulator
@@ -39,19 +39,19 @@ jobs:
       - name: Build (Simulator)
         run: |
           xcodebuild \
-            -project TripLingo.xcodeproj \
-            -scheme TripLingo \
+            -project CityScout.xcodeproj \
+            -scheme CityScout \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination "platform=iOS Simulator,name=CI-iPhone" \
+            -destination "generic/platform=iOS Simulator" \
             clean build
 
       - name: Test (Simulator)
         run: |
           xcodebuild \
-            -project TripLingo.xcodeproj \
-            -scheme TripLingo \
+            -project CityScout.xcodeproj \
+            -scheme CityScout \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination "platform=iOS Simulator,name=CI-iPhone" \
+            -destination "generic/platform=iOS Simulator" \
             test

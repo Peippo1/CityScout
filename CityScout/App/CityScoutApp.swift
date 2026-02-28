@@ -1,6 +1,6 @@
 //
-//  TripLingoApp.swift
-//  TripLingo
+//  CityScoutApp.swift
+//  CityScout
 //
 //  Created by Tim Finch on 15/02/2026.
 //
@@ -9,13 +9,14 @@ import SwiftUI
 import SwiftData
 
 @main
-struct TripLingoApp: App {
+struct CityScoutApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Trip.self,
             Situation.self,
             Phrase.self,
             SavedPhrase.self,
+            SavedPlace.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
