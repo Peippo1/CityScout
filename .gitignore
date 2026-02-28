@@ -35,3 +35,15 @@ fastlane/test_output/
 # App signing
 *.p12
 *.mobileprovision
+
+
+build/
+DerivedData/
+
+# Xcode
+DerivedData/
+*.xcuserstate
+**/xcuserdata/
+
+# Build artifacts
+build/
