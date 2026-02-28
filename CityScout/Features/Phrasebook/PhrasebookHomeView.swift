@@ -3,6 +3,7 @@ import SwiftData
 
 struct PhrasebookHomeView: View {
     @Environment(\.modelContext) private var modelContext
+    @State private var searchText = ""
 
     @Query(sort: [SortDescriptor(\SavedPhrase.createdAt, order: .reverse)])
     private var savedPhrases: [SavedPhrase]
@@ -12,6 +13,16 @@ struct PhrasebookHomeView: View {
     )
     private var recentPracticed: [SavedPhrase]
 
+    private var filteredSavedPhrases: [SavedPhrase] {
+        guard !searchText.isEmpty else { return savedPhrases }
+        return savedPhrases.filter(matchesSearch)
+    }
+
+    private var filteredRecentPracticed: [SavedPhrase] {
+        guard !searchText.isEmpty else { return recentPracticed }
+        return recentPracticed.filter(matchesSearch)
+    }
+
     var body: some View {
         Group {
             if savedPhrases.isEmpty {
@@ -20,11 +31,13 @@ struct PhrasebookHomeView: View {
                     systemImage: "text.book.closed",
                     description: Text("Save a phrase from Lessons to see it here.")
                 )
+            } else if filteredSavedPhrases.isEmpty {
+                ContentUnavailableView.search(text: searchText)
             } else {
                 List {
-                    if !recentPracticed.isEmpty {
+                    if !filteredRecentPracticed.isEmpty {
                         Section("Recently Practiced") {
-                            ForEach(recentPracticed.prefix(5)) { savedPhrase in
+                            ForEach(filteredRecentPracticed.prefix(5)) { savedPhrase in
                                 NavigationLink {
                                     SavedPhraseDetailView(savedPhrase: savedPhrase)
                                 } label: {
@@ -42,7 +55,7 @@ struct PhrasebookHomeView: View {
                         }
                     }
 
-                    ForEach(savedPhrases) { savedPhrase in
+                    ForEach(filteredSavedPhrases) { savedPhrase in
                         NavigationLink {
                             SavedPhraseDetailView(savedPhrase: savedPhrase)
                         } label: {
@@ -62,6 +75,7 @@ struct PhrasebookHomeView: View {
             }
         }
         .navigationTitle("Phrasebook")
+        .searchable(text: $searchText, prompt: "Search phrases")
         .toolbar {
             if !savedPhrases.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -71,9 +85,14 @@ struct PhrasebookHomeView: View {
         }
     }
 
+    private func matchesSearch(_ savedPhrase: SavedPhrase) -> Bool {
+        savedPhrase.targetText.localizedCaseInsensitiveContains(searchText)
+            || savedPhrase.englishMeaning.localizedCaseInsensitiveContains(searchText)
+    }
+
     private func deleteSavedPhrases(at offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(savedPhrases[index])
+            modelContext.delete(filteredSavedPhrases[index])
         }
 
         do {
