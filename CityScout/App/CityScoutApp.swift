@@ -16,6 +16,7 @@ struct CityScoutApp: App {
             Situation.self,
             Phrase.self,
             SavedPhrase.self,
+            SavedPlace.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

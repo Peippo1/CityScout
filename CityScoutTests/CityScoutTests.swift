@@ -81,7 +81,7 @@ final class CityScoutTests: XCTestCase {
         let tripID = trip.id
         let descriptor = FetchDescriptor<Situation>(
             predicate: #Predicate { situation in
-                situation.trip.id == tripID
+                situation.trip?.id == tripID
             }
         )
         return try modelContext.fetch(descriptor)
@@ -92,7 +92,7 @@ final class CityScoutTests: XCTestCase {
         let situationID = situation.id
         let descriptor = FetchDescriptor<Phrase>(
             predicate: #Predicate { phrase in
-                phrase.situation.id == situationID
+                phrase.situation?.id == situationID
             }
         )
         return try modelContext.fetch(descriptor)

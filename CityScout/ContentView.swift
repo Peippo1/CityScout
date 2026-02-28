@@ -41,6 +41,13 @@ struct ContentView: View {
             .tabItem {
                 Label("Explore", systemImage: "map")
             }
+
+            NavigationStack {
+                MapHomeView()
+            }
+            .tabItem {
+                Label("Map", systemImage: "map")
+            }
         }
         .task {
             guard !didRunSeed else { return }
