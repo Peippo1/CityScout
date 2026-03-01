@@ -1,0 +1,111 @@
+{
+  "destination": "Copenhagen",
+  "languages": ["Danish"],
+  "situations": [
+    {
+      "title": "Cafe / Restaurant",
+      "phrases": [
+        {
+          "targetText": "En kaffe, tak.",
+          "englishMeaning": "One coffee, please.",
+          "notes": "Polite cafe order.",
+          "tags": ["cafe", "polite"]
+        },
+        {
+          "targetText": "Jeg vil gerne have et bord til to.",
+          "englishMeaning": "I would like a table for two.",
+          "notes": "Restaurant seating phrase.",
+          "tags": ["restaurant", "seating"]
+        },
+        {
+          "targetText": "Menuen, tak.",
+          "englishMeaning": "The menu, please.",
+          "notes": "Simple request.",
+          "tags": ["restaurant", "menu"]
+        },
+        {
+          "targetText": "Har I vegetariske retter?",
+          "englishMeaning": "Do you have vegetarian dishes?",
+          "notes": "Dietary preference question.",
+          "tags": ["food", "dietary"]
+        },
+        {
+          "targetText": "Regningen, tak.",
+          "englishMeaning": "The bill, please.",
+          "notes": "Ask when ready to pay.",
+          "tags": ["restaurant", "payment"]
+        }
+      ]
+    },
+    {
+      "title": "Getting Around",
+      "phrases": [
+        {
+          "targetText": "Hvor er den naermeste metrostation?",
+          "englishMeaning": "Where is the nearest metro station?",
+          "notes": "Transit direction question.",
+          "tags": ["transport", "metro"]
+        },
+        {
+          "targetText": "En billet til centrum, tak.",
+          "englishMeaning": "One ticket to the city center, please.",
+          "notes": "Buying a ticket.",
+          "tags": ["transport", "ticket"]
+        },
+        {
+          "targetText": "Hvor meget koster det til lufthavnen?",
+          "englishMeaning": "How much is it to the airport?",
+          "notes": "Taxi fare question.",
+          "tags": ["taxi", "price"]
+        },
+        {
+          "targetText": "Kan du saette mig af her?",
+          "englishMeaning": "Can you drop me off here?",
+          "notes": "Taxi drop-off phrase.",
+          "tags": ["taxi", "direction"]
+        },
+        {
+          "targetText": "Forer denne vej til Nyhavn?",
+          "englishMeaning": "Does this road lead to Nyhavn?",
+          "notes": "Walking direction phrase.",
+          "tags": ["walking", "directions"]
+        }
+      ]
+    },
+    {
+      "title": "Hotel / Check-in",
+      "phrases": [
+        {
+          "targetText": "Jeg har en reservation i navnet Finch.",
+          "englishMeaning": "I have a reservation under the name Finch.",
+          "notes": "At hotel reception.",
+          "tags": ["hotel", "checkin"]
+        },
+        {
+          "targetText": "Hvornar er check-ud?",
+          "englishMeaning": "What time is check-out?",
+          "notes": "Check-out timing.",
+          "tags": ["hotel", "checkout"]
+        },
+        {
+          "targetText": "Kan I opbevare min bagage?",
+          "englishMeaning": "Can you store my luggage?",
+          "notes": "Luggage storage request.",
+          "tags": ["hotel", "luggage"]
+        },
+        {
+          "targetText": "Er vaerelset klar?",
+          "englishMeaning": "Is the room ready?",
+          "notes": "Room readiness question.",
+          "tags": ["hotel", "room"]
+        },
+        {
+          "targetText": "Kan jeg fa en ekstra nogle, tak?",
+          "englishMeaning": "Can I have an extra key, please?",
+          "notes": "Common front desk request.",
+          "tags": ["hotel", "request"]
+        }
+      ]
+    }
+  ]
+}

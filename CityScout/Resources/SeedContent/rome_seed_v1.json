@@ -1,0 +1,111 @@
+{
+  "destination": "Rome",
+  "languages": ["Italian"],
+  "situations": [
+    {
+      "title": "Cafe / Restaurant",
+      "phrases": [
+        {
+          "targetText": "Un caffe, per favore.",
+          "englishMeaning": "One coffee, please.",
+          "notes": "Basic and polite in cafes.",
+          "tags": ["cafe", "polite"]
+        },
+        {
+          "targetText": "Vorrei un tavolo per due.",
+          "englishMeaning": "I would like a table for two.",
+          "notes": "Restaurant seating request.",
+          "tags": ["restaurant", "seating"]
+        },
+        {
+          "targetText": "Il menu, per favore.",
+          "englishMeaning": "The menu, please.",
+          "notes": "Simple request.",
+          "tags": ["restaurant", "menu"]
+        },
+        {
+          "targetText": "Avete opzioni vegetariane?",
+          "englishMeaning": "Do you have vegetarian options?",
+          "notes": "Dietary preference phrase.",
+          "tags": ["food", "dietary"]
+        },
+        {
+          "targetText": "Il conto, per favore.",
+          "englishMeaning": "The bill, please.",
+          "notes": "Standard bill request.",
+          "tags": ["restaurant", "payment"]
+        }
+      ]
+    },
+    {
+      "title": "Getting Around",
+      "phrases": [
+        {
+          "targetText": "Dove si trova la stazione metro piu vicina?",
+          "englishMeaning": "Where is the nearest metro station?",
+          "notes": "Useful for city transport.",
+          "tags": ["transport", "metro"]
+        },
+        {
+          "targetText": "Un biglietto per il centro, per favore.",
+          "englishMeaning": "One ticket to the city center, please.",
+          "notes": "Buying transit tickets.",
+          "tags": ["transport", "ticket"]
+        },
+        {
+          "targetText": "Quanto costa fino all'aeroporto?",
+          "englishMeaning": "How much is it to the airport?",
+          "notes": "Taxi pricing question.",
+          "tags": ["taxi", "price"]
+        },
+        {
+          "targetText": "Puoi lasciarmi qui, per favore?",
+          "englishMeaning": "Can you drop me off here, please?",
+          "notes": "Taxi stop request.",
+          "tags": ["taxi", "direction"]
+        },
+        {
+          "targetText": "Questa strada porta al Colosseo?",
+          "englishMeaning": "Does this street lead to the Colosseum?",
+          "notes": "Walking direction check.",
+          "tags": ["walking", "directions"]
+        }
+      ]
+    },
+    {
+      "title": "Hotel / Check-in",
+      "phrases": [
+        {
+          "targetText": "Ho una prenotazione a nome Finch.",
+          "englishMeaning": "I have a reservation under the name Finch.",
+          "notes": "At check-in desk.",
+          "tags": ["hotel", "checkin"]
+        },
+        {
+          "targetText": "A che ora e il check-out?",
+          "englishMeaning": "What time is check-out?",
+          "notes": "Important timing question.",
+          "tags": ["hotel", "checkout"]
+        },
+        {
+          "targetText": "Potete tenere i miei bagagli?",
+          "englishMeaning": "Can you store my bags?",
+          "notes": "For luggage storage.",
+          "tags": ["hotel", "luggage"]
+        },
+        {
+          "targetText": "La camera e pronta?",
+          "englishMeaning": "Is the room ready?",
+          "notes": "Check room readiness.",
+          "tags": ["hotel", "room"]
+        },
+        {
+          "targetText": "Posso avere una chiave in piu, per favore?",
+          "englishMeaning": "Can I have an extra key, please?",
+          "notes": "Common guest request.",
+          "tags": ["hotel", "request"]
+        }
+      ]
+    }
+  ]
+}

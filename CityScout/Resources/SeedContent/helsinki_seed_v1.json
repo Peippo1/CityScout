@@ -1,0 +1,111 @@
+{
+  "destination": "Helsinki",
+  "languages": ["Finnish"],
+  "situations": [
+    {
+      "title": "Cafe / Restaurant",
+      "phrases": [
+        {
+          "targetText": "Yksi kahvi, kiitos.",
+          "englishMeaning": "One coffee, please.",
+          "notes": "Basic cafe order.",
+          "tags": ["cafe", "polite"]
+        },
+        {
+          "targetText": "Haluaisin poydan kahdelle.",
+          "englishMeaning": "I would like a table for two.",
+          "notes": "Restaurant seating request.",
+          "tags": ["restaurant", "seating"]
+        },
+        {
+          "targetText": "Ruokalista, kiitos.",
+          "englishMeaning": "The menu, please.",
+          "notes": "Simple and practical.",
+          "tags": ["restaurant", "menu"]
+        },
+        {
+          "targetText": "Onko teilla kasvisvaihtoehtoja?",
+          "englishMeaning": "Do you have vegetarian options?",
+          "notes": "Dietary needs phrase.",
+          "tags": ["food", "dietary"]
+        },
+        {
+          "targetText": "Lasku, kiitos.",
+          "englishMeaning": "The bill, please.",
+          "notes": "Used when ready to pay.",
+          "tags": ["restaurant", "payment"]
+        }
+      ]
+    },
+    {
+      "title": "Getting Around",
+      "phrases": [
+        {
+          "targetText": "Missa on lahin metroasema?",
+          "englishMeaning": "Where is the nearest metro station?",
+          "notes": "Transit navigation.",
+          "tags": ["transport", "metro"]
+        },
+        {
+          "targetText": "Yksi lippu keskustaan, kiitos.",
+          "englishMeaning": "One ticket to the city center, please.",
+          "notes": "Buying a ticket.",
+          "tags": ["transport", "ticket"]
+        },
+        {
+          "targetText": "Paljonko maksaa lentokentalle?",
+          "englishMeaning": "How much is it to the airport?",
+          "notes": "Taxi cost question.",
+          "tags": ["taxi", "price"]
+        },
+        {
+          "targetText": "Voitteko jattaa minut tahan?",
+          "englishMeaning": "Can you drop me off here?",
+          "notes": "Taxi drop-off request.",
+          "tags": ["taxi", "direction"]
+        },
+        {
+          "targetText": "Johtaako tama katu rautatieasemalle?",
+          "englishMeaning": "Does this street lead to the train station?",
+          "notes": "Walking direction question.",
+          "tags": ["walking", "directions"]
+        }
+      ]
+    },
+    {
+      "title": "Hotel / Check-in",
+      "phrases": [
+        {
+          "targetText": "Minulla on varaus nimella Finch.",
+          "englishMeaning": "I have a reservation under the name Finch.",
+          "notes": "Reception phrase.",
+          "tags": ["hotel", "checkin"]
+        },
+        {
+          "targetText": "Mihin aikaan uloskirjautuminen on?",
+          "englishMeaning": "What time is check-out?",
+          "notes": "Check-out timing.",
+          "tags": ["hotel", "checkout"]
+        },
+        {
+          "targetText": "Voitteko sailyttaa matkatavarani?",
+          "englishMeaning": "Can you store my bags?",
+          "notes": "For baggage storage.",
+          "tags": ["hotel", "luggage"]
+        },
+        {
+          "targetText": "Onko huone valmis?",
+          "englishMeaning": "Is the room ready?",
+          "notes": "Room readiness check.",
+          "tags": ["hotel", "room"]
+        },
+        {
+          "targetText": "Voinko saada ylimaaraisen avaimen?",
+          "englishMeaning": "Can I get an extra key?",
+          "notes": "Common front desk request.",
+          "tags": ["hotel", "request"]
+        }
+      ]
+    }
+  ]
+}

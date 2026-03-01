@@ -1,0 +1,111 @@
+{
+  "destination": "Athens",
+  "languages": ["Greek"],
+  "situations": [
+    {
+      "title": "Cafe / Restaurant",
+      "phrases": [
+        {
+          "targetText": "Ena kafe, parakalo.",
+          "englishMeaning": "One coffee, please.",
+          "notes": "Polite and common in cafes.",
+          "tags": ["cafe", "polite"]
+        },
+        {
+          "targetText": "Tha ithela ena trapezi gia dyo.",
+          "englishMeaning": "I would like a table for two.",
+          "notes": "Useful when entering a restaurant.",
+          "tags": ["restaurant", "seating"]
+        },
+        {
+          "targetText": "To menou, parakalo.",
+          "englishMeaning": "The menu, please.",
+          "notes": "Short and practical request.",
+          "tags": ["restaurant", "menu"]
+        },
+        {
+          "targetText": "Exete chortofagikes epiloges?",
+          "englishMeaning": "Do you have vegetarian options?",
+          "notes": "Helpful for dietary needs.",
+          "tags": ["food", "dietary"]
+        },
+        {
+          "targetText": "Ton logariasmo, parakalo.",
+          "englishMeaning": "The bill, please.",
+          "notes": "Standard way to ask for payment.",
+          "tags": ["restaurant", "payment"]
+        }
+      ]
+    },
+    {
+      "title": "Getting Around",
+      "phrases": [
+        {
+          "targetText": "Pou ine o kontinoteros stathmos metro?",
+          "englishMeaning": "Where is the nearest metro station?",
+          "notes": "For metro navigation.",
+          "tags": ["transport", "metro"]
+        },
+        {
+          "targetText": "Ena eisitirio gia to kentro, parakalo.",
+          "englishMeaning": "One ticket to the city center, please.",
+          "notes": "Buying a transit ticket.",
+          "tags": ["transport", "ticket"]
+        },
+        {
+          "targetText": "Poso kani mechri to aerodromio?",
+          "englishMeaning": "How much is it to the airport?",
+          "notes": "Useful in taxis.",
+          "tags": ["taxi", "price"]
+        },
+        {
+          "targetText": "Borite na me afisete edo?",
+          "englishMeaning": "Can you drop me off here?",
+          "notes": "Taxi phrase.",
+          "tags": ["taxi", "direction"]
+        },
+        {
+          "targetText": "Aftos o dromos odigi stin Plaka?",
+          "englishMeaning": "Does this street lead to Plaka?",
+          "notes": "Walking direction question.",
+          "tags": ["walking", "directions"]
+        }
+      ]
+    },
+    {
+      "title": "Hotel / Check-in",
+      "phrases": [
+        {
+          "targetText": "Echo kratisi sto onoma Finch.",
+          "englishMeaning": "I have a reservation under the name Finch.",
+          "notes": "At reception desk.",
+          "tags": ["hotel", "checkin"]
+        },
+        {
+          "targetText": "Ti ora ine to check-out?",
+          "englishMeaning": "What time is check-out?",
+          "notes": "Important before departure.",
+          "tags": ["hotel", "checkout"]
+        },
+        {
+          "targetText": "Borite na kratiseite tis valitses mou?",
+          "englishMeaning": "Can you store my bags?",
+          "notes": "For early arrival or late departure.",
+          "tags": ["hotel", "luggage"]
+        },
+        {
+          "targetText": "To domatio den ine etoimo akoma.",
+          "englishMeaning": "The room is not ready yet.",
+          "notes": "Helpful when clarifying status.",
+          "tags": ["hotel", "room"]
+        },
+        {
+          "targetText": "Chriazomai enan epipleon kleidi, parakalo.",
+          "englishMeaning": "I need an extra key, please.",
+          "notes": "Common reception request.",
+          "tags": ["hotel", "request"]
+        }
+      ]
+    }
+  ]
+}
