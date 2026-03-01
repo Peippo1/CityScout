@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct PhrasebookHomeView: View {
+    let destinationName: String
+
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
 
@@ -13,23 +15,35 @@ struct PhrasebookHomeView: View {
     )
     private var recentPracticed: [SavedPhrase]
 
+    init(destinationName: String) {
+        self.destinationName = destinationName
+    }
+
+    private var destinationSavedPhrases: [SavedPhrase] {
+        savedPhrases.filter { $0.destinationName == destinationName }
+    }
+
+    private var destinationRecentPracticed: [SavedPhrase] {
+        recentPracticed.filter { $0.destinationName == destinationName }
+    }
+
     private var filteredSavedPhrases: [SavedPhrase] {
-        guard !searchText.isEmpty else { return savedPhrases }
-        return savedPhrases.filter(matchesSearch)
+        guard !searchText.isEmpty else { return destinationSavedPhrases }
+        return destinationSavedPhrases.filter(matchesSearch)
     }
 
     private var filteredRecentPracticed: [SavedPhrase] {
-        guard !searchText.isEmpty else { return recentPracticed }
-        return recentPracticed.filter(matchesSearch)
+        guard !searchText.isEmpty else { return destinationRecentPracticed }
+        return destinationRecentPracticed.filter(matchesSearch)
     }
 
     var body: some View {
         Group {
-            if savedPhrases.isEmpty {
+            if destinationSavedPhrases.isEmpty {
                 ContentUnavailableView(
                     "No Saved Phrases",
                     systemImage: "text.book.closed",
-                    description: Text("Save a phrase from Lessons to see it here.")
+                    description: Text("Save a phrase from Lessons in \(destinationName) to see it here.")
                 )
             } else if filteredSavedPhrases.isEmpty {
                 ContentUnavailableView.search(text: searchText)
@@ -77,7 +91,7 @@ struct PhrasebookHomeView: View {
         .navigationTitle("Phrasebook")
         .searchable(text: $searchText, prompt: "Search phrases")
         .toolbar {
-            if !savedPhrases.isEmpty {
+            if !destinationSavedPhrases.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     EditButton()
                 }

@@ -10,50 +10,35 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("selectedDestinationName") private var selectedDestinationName = ""
+    @AppStorage("seedErrorMessage") private var seedErrorMessage = ""
     @State private var didRunSeed = false
 
     var body: some View {
-        TabView {
-            NavigationStack {
-                LessonsHomeView()
-            }
-            .tabItem {
-                Label("Lessons", systemImage: "book")
-            }
-
-            NavigationStack {
-                PhrasebookHomeView()
-            }
-            .tabItem {
-                Label("Phrasebook", systemImage: "text.book.closed")
-            }
-
-            NavigationStack {
-                TranslateHomeView()
-            }
-            .tabItem {
-                Label("Translate", systemImage: "globe")
-            }
-
-            NavigationStack {
-                ExploreHomeView()
-            }
-            .tabItem {
-                Label("Explore", systemImage: "map")
-            }
-
-            NavigationStack {
-                MapHomeView()
-            }
-            .tabItem {
-                Label("Map", systemImage: "map")
+        Group {
+            if hasSeenOnboarding == false {
+                OnboardingFlowView()
+            } else if selectedDestinationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                NavigationStack {
+                    DestinationPickerView()
+                }
+            } else {
+                TripShellView(destinationName: selectedDestinationName)
             }
         }
         .task {
             guard !didRunSeed else { return }
             didRunSeed = true
             await MainActor.run {
-                SeedBootstrapper.run(in: modelContext)
+                do {
+                    // Seed from the injected modelContext so seeding and UI queries use the same container.
+                    try SeedBootstrapper.runIfNeeded(in: modelContext)
+                    seedErrorMessage = ""
+                } catch {
+                    print("Seed bootstrap failed: \(error.localizedDescription)")
+                    seedErrorMessage = error.localizedDescription
+                }
             }
         }
     }

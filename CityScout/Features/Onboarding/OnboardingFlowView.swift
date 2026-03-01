@@ -64,7 +64,7 @@ private struct OnboardingPageView: View {
         VStack(spacing: 20) {
             Image(systemName: symbolName)
                 .font(.system(size: 72))
-                .foregroundStyle(.accent)
+                .foregroundStyle(Color.accentColor)
                 .scaleEffect(animateIcon ? 1.0 : 0.88)
                 .opacity(animateIcon ? 1.0 : 0.7)
                 .accessibilityHidden(true)

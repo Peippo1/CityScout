@@ -3,15 +3,27 @@ import SwiftData
 import MapKit
 
 struct MapHomeView: View {
+    let destinationName: String
+
     @Environment(\.modelContext) private var modelContext
 
-    @Query(sort: [SortDescriptor(\SavedPlace.createdAt, order: .reverse)])
+    @Query
     private var savedPlaces: [SavedPlace]
 
     @State private var position: MapCameraPosition = .automatic
     @State private var pendingCoordinate: CLLocationCoordinate2D?
     @State private var pendingPlaceName = ""
     @State private var isShowingSaveSheet = false
+
+    init(destinationName: String) {
+        self.destinationName = destinationName
+        _savedPlaces = Query(
+            filter: #Predicate { place in
+                place.destinationName == destinationName
+            },
+            sort: [SortDescriptor(\SavedPlace.createdAt, order: .reverse)]
+        )
+    }
 
     var body: some View {
         MapReader { proxy in
@@ -63,6 +75,7 @@ struct MapHomeView: View {
                         savePendingPlace()
                     }
                     .disabled(trimmedPendingName.isEmpty || pendingCoordinate == nil)
+                    .accessibilityLabel("Save place")
                 }
             }
         }
@@ -92,6 +105,7 @@ struct MapHomeView: View {
         do {
             try SavedPlaceService.savePlace(
                 name: trimmedPendingName,
+                destinationName: destinationName,
                 latitude: coordinate.latitude,
                 longitude: coordinate.longitude,
                 in: modelContext
@@ -111,6 +125,6 @@ struct MapHomeView: View {
 
 #Preview {
     NavigationStack {
-        MapHomeView()
+        MapHomeView(destinationName: "Paris")
     }
 }
