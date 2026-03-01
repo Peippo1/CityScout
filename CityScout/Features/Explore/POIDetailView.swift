@@ -15,7 +15,7 @@ struct POIDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 Image(systemName: poi.symbolName)
                     .font(.system(size: 56))
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(Color.accentColor)
                     .accessibilityHidden(true)
 
                 Text(poi.name)

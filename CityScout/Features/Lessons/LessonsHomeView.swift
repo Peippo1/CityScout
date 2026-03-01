@@ -2,15 +2,39 @@ import SwiftUI
 import SwiftData
 
 struct LessonsHomeView: View {
+    let destinationName: String
+
+    @Query(sort: [SortDescriptor(\Trip.createdAt, order: .forward)])
+    private var trips: [Trip]
+
+    init(destinationName: String) {
+        self.destinationName = destinationName
+    }
+
+    private var selectedTrip: Trip? {
+        trips.first { $0.destinationName == destinationName }
+    }
+
     var body: some View {
-        TripsHomeView()
-            .navigationTitle("Lessons")
+        Group {
+            if let trip = selectedTrip {
+                TripLessonsView(trip: trip)
+                    .navigationTitle("Lessons")
+            } else {
+                ContentUnavailableView(
+                    "No Lessons Found",
+                    systemImage: "book",
+                    description: Text("No trip content is available for \(destinationName) yet.")
+                )
+                .navigationTitle("Lessons")
+            }
+        }
     }
 }
 
 #Preview {
     NavigationStack {
-        LessonsHomeView()
+        LessonsHomeView(destinationName: "Barcelona")
     }
     .modelContainer(LessonsHomeView.previewContainer)
 }
