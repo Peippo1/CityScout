@@ -21,10 +21,12 @@ struct POIDetailView: View {
                 Text(poi.name)
                     .font(.title2)
                     .fontWeight(.semibold)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(poi.shortDescription)
                     .font(.body)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Button {
                     saveToMap()
@@ -37,6 +39,7 @@ struct POIDetailView: View {
                 .accessibilityHint("Adds this point of interest to your saved places.")
             }
             .padding()
+            .accessibilityElement(children: .contain)
         }
         .navigationTitle(poi.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -69,6 +72,7 @@ struct POIDetailView: View {
         POIDetailView(
             poi: PointOfInterest(
                 city: "Paris",
+                category: .sights,
                 name: "Eiffel Tower",
                 shortDescription: "Iconic wrought-iron landmark with panoramic city views.",
                 symbolName: "tower",
