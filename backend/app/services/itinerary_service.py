@@ -1,7 +1,104 @@
+import json
+import logging
+
+from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
+
+from app.core.config import settings
 from app.schemas.itinerary import ItineraryBlock, ItineraryRequest, ItineraryResponse
 
 
-def generate_mock_itinerary(request: ItineraryRequest) -> ItineraryResponse:
+logger = logging.getLogger(__name__)
+
+SYSTEM_PROMPT = """You are a travel planning assistant.
+Generate a one-day itinerary for a user in a specific city.
+
+Return ONLY valid JSON with the following structure:
+{
+  "morning": { "title": "...", "activities": ["...", "..."] },
+  "afternoon": { "title": "...", "activities": ["...", "..."] },
+  "evening": { "title": "...", "activities": ["...", "..."] },
+  "notes": ["...", "..."]
+}
+
+Do not include any explanation or extra text."""
+
+MODEL_NAME = "gpt-4o-mini"
+
+
+def generate_itinerary(request: ItineraryRequest) -> ItineraryResponse:
+    destination = request.destination.strip() or "your destination"
+    preferences = _normalize_preferences(request.preferences)
+
+    logger.info("Generating itinerary for destination=%s preferences=%s", destination, preferences)
+
+    try:
+        client = OpenAI(api_key=settings.require_openai_api_key(), timeout=20.0, max_retries=1)
+        completion = client.chat.completions.create(
+            model=MODEL_NAME,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": _build_user_prompt(request, destination, preferences)},
+            ],
+        )
+        content = completion.choices[0].message.content
+        if not content:
+            raise ValueError("OpenAI returned an empty response.")
+        return _parse_itinerary_response(content, destination)
+    except RuntimeError as error:
+        logger.error("Configuration error while generating itinerary: %s", error)
+    except APITimeoutError as error:
+        logger.error("OpenAI timeout while generating itinerary for %s: %s", destination, error)
+    except APIConnectionError as error:
+        logger.error("OpenAI connection error while generating itinerary for %s: %s", destination, error)
+    except APIStatusError as error:
+        logger.error(
+            "OpenAI status error while generating itinerary for %s: status=%s request_id=%s",
+            destination,
+            error.status_code,
+            getattr(error, "request_id", None),
+        )
+    except (json.JSONDecodeError, ValueError) as error:
+        logger.error("Invalid itinerary JSON for %s: %s", destination, error)
+    except Exception as error:
+        logger.error("Unexpected itinerary generation error for %s: %s", destination, error)
+
+    return _generate_fallback_itinerary(request)
+
+
+def _build_user_prompt(
+    request: ItineraryRequest,
+    destination: str,
+    preferences: list[str],
+) -> str:
+    saved_places = [place.strip() for place in request.saved_places if place.strip()]
+    prompt = request.prompt.strip() or "No additional prompt provided."
+
+    payload = {
+        "destination": destination,
+        "prompt": prompt,
+        "preferences": preferences,
+        "saved_places": saved_places,
+        "constraints": [
+            "Create a realistic one-day city itinerary.",
+            "Keep the plan concise, practical, and traveler-friendly.",
+            "Use saved places when they fit naturally.",
+            "Return exactly two activities per time block when possible.",
+        ],
+    }
+    return json.dumps(payload, ensure_ascii=True)
+
+
+def _parse_itinerary_response(content: str, destination: str) -> ItineraryResponse:
+    raw_payload = json.loads(content)
+    raw_payload["destination"] = destination
+
+    if hasattr(ItineraryResponse, "model_validate"):
+        return ItineraryResponse.model_validate(raw_payload)
+    return ItineraryResponse.parse_obj(raw_payload)
+
+
+def _generate_fallback_itinerary(request: ItineraryRequest) -> ItineraryResponse:
     destination = request.destination.strip() or "your destination"
     preferences = _normalize_preferences(request.preferences)
     saved_places = [place.strip() for place in request.saved_places if place.strip()]
