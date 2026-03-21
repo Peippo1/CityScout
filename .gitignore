@@ -47,3 +47,9 @@ DerivedData/
 
 # Build artifacts
 build/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
