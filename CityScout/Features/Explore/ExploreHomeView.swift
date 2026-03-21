@@ -18,6 +18,12 @@ struct ExploreHomeView: View {
         return destinationPOIs.filter { $0.category == selectedCategory }
     }
 
+    private var topPicks: [PointOfInterest] {
+        let picks = destinationPOIs.filter(\.isTopPick)
+        guard let selectedCategory else { return picks }
+        return picks.filter { $0.category == selectedCategory }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -36,6 +42,10 @@ struct ExploreHomeView: View {
                     .accessibilityHint("Explore another city or check back later.")
                 } else {
                     categoryFilterBar
+
+                    if topPicks.isEmpty == false {
+                        topPicksSection
+                    }
 
                     if filteredPOIs.isEmpty {
                         ContentUnavailableView(
@@ -121,6 +131,31 @@ struct ExploreHomeView: View {
         .buttonStyle(.plain)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
+
+    private var topPicksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Top Picks")
+                .font(.headline)
+                .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(topPicks) { poi in
+                        NavigationLink {
+                            POIDetailView(poi: poi, destinationName: destinationName)
+                        } label: {
+                            TopPickCardView(poi: poi)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("\(poi.name), \(poi.category.displayName.lowercased()), \(destinationName), top pick")
+                        .accessibilityHint("Opens details and save option.")
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
 }
 
 private struct POITileView: View {
@@ -159,11 +194,41 @@ private struct POITileView: View {
     }
 }
 
+private struct TopPickCardView: View {
+    let poi: PointOfInterest
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: poi.symbolName)
+                .font(.title3)
+                .foregroundStyle(Color.accentColor)
+                .accessibilityHidden(true)
+
+            Text(poi.name)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Label(poi.category.displayName, systemImage: poi.category.icon)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 180, alignment: .leading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+}
+
 private extension ExploreHomeView {
     static let allPOIs: [PointOfInterest] = [
         PointOfInterest(
             city: "Paris",
             category: .sights,
+            isTopPick: true,
             name: "Eiffel Tower",
             shortDescription: "Iconic wrought-iron landmark with panoramic city views.",
             symbolName: "tower",
@@ -173,6 +238,7 @@ private extension ExploreHomeView {
         PointOfInterest(
             city: "Paris",
             category: .sights,
+            isTopPick: true,
             name: "Louvre Museum",
             shortDescription: "World-class art museum and home of the Mona Lisa.",
             symbolName: "building.columns",
@@ -182,6 +248,7 @@ private extension ExploreHomeView {
         PointOfInterest(
             city: "Paris",
             category: .cafes,
+            isTopPick: true,
             name: "Montmartre",
             shortDescription: "Historic hilltop district known for artists and cafes.",
             symbolName: "paintpalette",
@@ -200,6 +267,7 @@ private extension ExploreHomeView {
         PointOfInterest(
             city: "Paris",
             category: .shopping,
+            isTopPick: true,
             name: "Galeries Lafayette",
             shortDescription: "Historic department store with fashion, food halls, and a rooftop view.",
             symbolName: "bag",
@@ -209,6 +277,7 @@ private extension ExploreHomeView {
         PointOfInterest(
             city: "Barcelona",
             category: .sights,
+            isTopPick: true,
             name: "Sagrada Familia",
             shortDescription: "Gaudi's basilica and one of Barcelona's top landmarks.",
             symbolName: "building.columns.fill",
@@ -218,6 +287,7 @@ private extension ExploreHomeView {
         PointOfInterest(
             city: "Barcelona",
             category: .sights,
+            isTopPick: true,
             name: "Park Guell",
             shortDescription: "Whimsical park with mosaic art and city viewpoints.",
             symbolName: "leaf",
@@ -227,6 +297,7 @@ private extension ExploreHomeView {
         PointOfInterest(
             city: "Barcelona",
             category: .nightlife,
+            isTopPick: true,
             name: "Gothic Quarter",
             shortDescription: "Medieval streets, plazas, and hidden courtyards.",
             symbolName: "building.2",
@@ -245,6 +316,7 @@ private extension ExploreHomeView {
         PointOfInterest(
             city: "Barcelona",
             category: .food,
+            isTopPick: true,
             name: "La Boqueria Market",
             shortDescription: "Busy food market with produce, tapas counters, and local specialties.",
             symbolName: "fork.knife",

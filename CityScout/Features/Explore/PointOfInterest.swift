@@ -44,6 +44,7 @@ struct PointOfInterest: Identifiable, Hashable {
     let id: UUID
     let city: String
     let category: POICategory
+    let isTopPick: Bool
     let name: String
     let shortDescription: String
     let symbolName: String
@@ -54,6 +55,7 @@ struct PointOfInterest: Identifiable, Hashable {
         id: UUID = UUID(),
         city: String,
         category: POICategory,
+        isTopPick: Bool = false,
         name: String,
         shortDescription: String,
         symbolName: String,
@@ -63,6 +65,7 @@ struct PointOfInterest: Identifiable, Hashable {
         self.id = id
         self.city = city
         self.category = category
+        self.isTopPick = isTopPick
         self.name = name
         self.shortDescription = shortDescription
         self.symbolName = symbolName
