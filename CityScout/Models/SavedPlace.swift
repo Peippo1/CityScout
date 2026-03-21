@@ -5,6 +5,7 @@ import SwiftData
 final class SavedPlace {
     var id: UUID
     var name: String
+    var category: POICategory?
     var destinationName: String
     var latitude: Double
     var longitude: Double
@@ -13,6 +14,7 @@ final class SavedPlace {
     init(
         id: UUID = UUID(),
         name: String,
+        category: POICategory? = nil,
         destinationName: String = "",
         latitude: Double,
         longitude: Double,
@@ -20,6 +22,7 @@ final class SavedPlace {
     ) {
         self.id = id
         self.name = name
+        self.category = category
         self.destinationName = destinationName
         self.latitude = latitude
         self.longitude = longitude

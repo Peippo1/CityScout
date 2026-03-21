@@ -4,6 +4,7 @@ import SwiftData
 enum SavedPlaceService {
     static func savePlace(
         name: String,
+        category: POICategory? = nil,
         destinationName: String,
         latitude: Double,
         longitude: Double,
@@ -11,6 +12,7 @@ enum SavedPlaceService {
     ) throws {
         let place = SavedPlace(
             name: name,
+            category: category,
             destinationName: destinationName,
             latitude: latitude,
             longitude: longitude

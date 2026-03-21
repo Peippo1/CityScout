@@ -54,6 +54,7 @@ struct POIDetailView: View {
         do {
             try SavedPlaceService.savePlace(
                 name: poi.name,
+                category: poi.category,
                 destinationName: destinationName,
                 latitude: poi.latitude,
                 longitude: poi.longitude,

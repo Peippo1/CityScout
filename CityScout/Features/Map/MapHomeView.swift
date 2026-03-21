@@ -14,6 +14,7 @@ struct MapHomeView: View {
     @State private var pendingCoordinate: CLLocationCoordinate2D?
     @State private var pendingPlaceName = ""
     @State private var isShowingSaveSheet = false
+    @State private var isShowingSavedPlaces = false
     @State private var selectedPlaceID: UUID?
 
     init(destinationName: String) {
@@ -54,6 +55,15 @@ struct MapHomeView: View {
             .sheet(isPresented: $isShowingSaveSheet) {
                 savePlaceSheet
             }
+            .sheet(isPresented: $isShowingSavedPlaces) {
+                NavigationStack {
+                    SavedPlacesListView(
+                        destinationName: destinationName,
+                        savedPlaces: savedPlaces,
+                        onSelectPlace: selectSavedPlace
+                    )
+                }
+            }
             .safeAreaInset(edge: .top) {
                 CityHeaderView(destinationName: destinationName)
                     .padding(.horizontal)
@@ -72,6 +82,15 @@ struct MapHomeView: View {
                 }
             }
             .navigationTitle("\(destinationName) Map")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Saved") {
+                        isShowingSavedPlaces = true
+                    }
+                    .accessibilityLabel("Saved places")
+                    .accessibilityHint("Shows your saved places grouped by category.")
+                }
+            }
             .animation(.easeInOut(duration: 0.2), value: selectedPlaceID)
         }
     }
@@ -129,7 +148,7 @@ struct MapHomeView: View {
                     .font(.title3.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(place.destinationName)
+                Text(place.category?.displayName ?? "Other")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -262,6 +281,17 @@ struct MapHomeView: View {
         let mapItem = MKMapItem(placemark: placemark)
         mapItem.name = place.name
         mapItem.openInMaps()
+    }
+
+    private func selectSavedPlace(_ place: SavedPlace) {
+        selectedPlaceID = place.id
+        isShowingSavedPlaces = false
+        position = .region(
+            MKCoordinateRegion(
+                center: coordinate(for: place),
+                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+            )
+        )
     }
 
     private func clearPendingPlace() {
