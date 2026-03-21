@@ -84,6 +84,8 @@ struct MapHomeView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 8)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    EmptyView()
                 }
             }
             .navigationTitle("\(destinationName) Map")
