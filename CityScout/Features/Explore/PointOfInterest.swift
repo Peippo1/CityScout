@@ -16,7 +16,7 @@ enum POICategory: String, CaseIterable, Identifiable, Hashable {
         case .sights:
             return "Sights"
         case .cafes:
-            return "Cafes"
+            return "Cafés"
         case .shopping:
             return "Shopping"
         case .nightlife:
@@ -29,13 +29,13 @@ enum POICategory: String, CaseIterable, Identifiable, Hashable {
         case .food:
             return "fork.knife"
         case .sights:
-            return "binoculars.fill"
+            return "camera.fill"
         case .cafes:
             return "cup.and.saucer.fill"
         case .shopping:
             return "bag.fill"
         case .nightlife:
-            return "music.note"
+            return "moon.stars.fill"
         }
     }
 }

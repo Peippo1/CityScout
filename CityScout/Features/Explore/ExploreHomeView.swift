@@ -3,7 +3,7 @@ import SwiftUI
 struct ExploreHomeView: View {
     let destinationName: String
 
-    @State private var selectedCategory: POICategory?
+    @State private var selectedCategory: POICategory? = nil
 
     private let columns = [
         GridItem(.adaptive(minimum: 160), spacing: 12)
@@ -81,6 +81,7 @@ struct ExploreHomeView: View {
                     selectedCategory = nil
                 }
                 .accessibilityLabel("Show all categories")
+                .accessibilityHint("Shows all locations.")
                 .accessibilityValue(selectedCategory == nil ? "Selected" : "Not selected")
 
                 ForEach(POICategory.allCases) { category in
@@ -92,6 +93,8 @@ struct ExploreHomeView: View {
                         selectedCategory = selectedCategory == category ? nil : category
                     }
                     .accessibilityLabel("Filter by \(category.displayName)")
+                    .accessibilityHint("Shows only \(category.displayName.lowercased()) locations.")
+                    .accessibilityAddTraits(selectedCategory == category ? .isSelected : [])
                 }
             }
             .padding(.horizontal)
