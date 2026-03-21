@@ -53,5 +53,5 @@ jobs:
             -scheme CityScout \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
+          -destination "platform=iOS Simulator,name=CI-iPhone" \
             test
