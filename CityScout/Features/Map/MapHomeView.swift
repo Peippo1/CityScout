@@ -8,6 +8,13 @@ private struct SavedPlaceCategoryStyle {
 }
 
 struct MapHomeView: View {
+    private enum MapFilterMode: String, CaseIterable, Identifiable {
+        case all
+        case itinerary
+
+        var id: String { rawValue }
+    }
+
     let destinationName: String
 
     @Environment(\.modelContext) private var modelContext
@@ -21,6 +28,7 @@ struct MapHomeView: View {
     @State private var isShowingSaveSheet = false
     @State private var isShowingSavedPlaces = false
     @State private var selectedPlaceID: UUID?
+    @State private var filterMode: MapFilterMode = .all
 
     init(destinationName: String) {
         self.destinationName = destinationName
@@ -33,13 +41,30 @@ struct MapHomeView: View {
     }
 
     private var selectedPlace: SavedPlace? {
-        savedPlaces.first { $0.id == selectedPlaceID }
+        filteredSavedPlaces.first { $0.id == selectedPlaceID }
+    }
+
+    private var filteredSavedPlaces: [SavedPlace] {
+        switch filterMode {
+        case .all:
+            return savedPlaces
+        case .itinerary:
+            return savedPlaces.filter(\.isItineraryDerived)
+        }
+    }
+
+    private var itineraryPlaces: [SavedPlace] {
+        savedPlaces.filter(\.isItineraryDerived)
+    }
+
+    private var shouldShowItineraryEmptyState: Bool {
+        filterMode == .itinerary && itineraryPlaces.isEmpty
     }
 
     var body: some View {
         MapReader { proxy in
             Map(position: $position) {
-                ForEach(savedPlaces) { place in
+                ForEach(filteredSavedPlaces) { place in
                     Annotation(place.name, coordinate: coordinate(for: place), anchor: .bottom) {
                         savedPlaceAnnotation(for: place)
                     }
@@ -64,18 +89,34 @@ struct MapHomeView: View {
                 NavigationStack {
                     SavedPlacesListView(
                         destinationName: destinationName,
-                        savedPlaces: savedPlaces,
+                        savedPlaces: filteredSavedPlaces,
                         onSelectPlace: selectSavedPlace
                     )
                 }
             }
             .safeAreaInset(edge: .top) {
-                CityHeaderView(destinationName: destinationName)
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.regularMaterial)
+                VStack(alignment: .leading, spacing: 12) {
+                    CityHeaderView(destinationName: destinationName)
+
+                    Picker("Map filter", selection: $filterMode) {
+                        Text("All")
+                            .tag(MapFilterMode.all)
+                            .accessibilityLabel("Show all places")
+                        Text("Itinerary")
+                            .tag(MapFilterMode.itinerary)
+                            .accessibilityLabel("Show itinerary places only")
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("Map filter")
+                    .accessibilityValue(
+                        filterMode == .all ? "Show all places" : "Show itinerary places only"
+                    )
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.regularMaterial)
             }
             .safeAreaInset(edge: .bottom) {
                 if let selectedPlace {
@@ -84,6 +125,20 @@ struct MapHomeView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 8)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    EmptyView()
+                }
+            }
+            .overlay {
+                if shouldShowItineraryEmptyState {
+                    ContentUnavailableView(
+                        "No itinerary places yet",
+                        systemImage: "map",
+                        description: Text("Generate a plan to see your day on the map")
+                    )
+                    .padding()
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .padding()
                 } else {
                     EmptyView()
                 }
@@ -99,6 +154,13 @@ struct MapHomeView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: selectedPlaceID)
+            .animation(.easeInOut(duration: 0.2), value: filterMode)
+            .onChange(of: filterMode) { _, _ in
+                guard let selectedPlaceID else { return }
+                if filteredSavedPlaces.contains(where: { $0.id == selectedPlaceID }) == false {
+                    self.selectedPlaceID = nil
+                }
+            }
         }
     }
 
@@ -135,6 +197,9 @@ struct MapHomeView: View {
     private func savedPlaceAnnotation(for place: SavedPlace) -> some View {
         let style = categoryStyle(for: place.category)
         let isSelected = place.id == selectedPlaceID
+        let isItineraryFocusMode = filterMode == .itinerary && place.isItineraryDerived
+        let pinDiameter: CGFloat = isSelected ? 34 : 30
+        let ringDiameter: CGFloat = isSelected ? 42 : 38
 
         return Button {
             selectedPlaceID = place.id
@@ -142,7 +207,7 @@ struct MapHomeView: View {
             ZStack {
                 Circle()
                     .fill(style.tint)
-                    .frame(width: isSelected ? 34 : 30, height: isSelected ? 34 : 30)
+                    .frame(width: pinDiameter, height: pinDiameter)
                     .overlay(
                         Circle()
                             .stroke(Color.white.opacity(0.9), lineWidth: 2)
@@ -151,7 +216,7 @@ struct MapHomeView: View {
                 if place.isItineraryDerived {
                     Circle()
                         .stroke(style.tint.opacity(0.9), style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
-                        .frame(width: isSelected ? 42 : 38, height: isSelected ? 42 : 38)
+                        .frame(width: ringDiameter, height: ringDiameter)
                 } else {
                     EmptyView()
                 }
@@ -160,7 +225,7 @@ struct MapHomeView: View {
                     .font(isSelected ? .headline : .subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
-            .scaleEffect(isSelected ? 1.12 : 1.0)
+            .scaleEffect(isItineraryFocusMode ? 1.16 : (isSelected ? 1.12 : 1.0))
             .shadow(color: .black.opacity(0.16), radius: 6, y: 3)
             .padding(6)
             .background(.thinMaterial, in: Circle())
