@@ -284,6 +284,9 @@ struct PlanHomeView: View {
             }
             .padding(.horizontal)
 
+            timelineOverview
+                .padding(.horizontal)
+
             VStack(spacing: 12) {
                 ForEach(itinerarySections) { section in
                     VStack(alignment: .leading, spacing: 10) {
@@ -342,6 +345,66 @@ struct PlanHomeView: View {
                 .accessibilityElement(children: .combine)
             }
         }
+    }
+
+    private var timelineOverview: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Timeline")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(itinerarySections.enumerated()), id: \.element.id) { index, section in
+                    timelineSection(section, isLast: index == itinerarySections.count - 1)
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    private func timelineSection(_ section: PlanSection, isLast: Bool) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 12, height: 12)
+                    .padding(.top, 6)
+                    .accessibilityHidden(true)
+
+                if isLast == false {
+                    Rectangle()
+                        .fill(Color.accentColor.opacity(0.25))
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                        .padding(.top, 6)
+                        .accessibilityHidden(true)
+                } else {
+                    EmptyView()
+                }
+            }
+            .frame(width: 12)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(section.title)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ForEach(Array(section.activities.enumerated()), id: \.offset) { index, activity in
+                    Text("\(index + 1). \(activity)")
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.bottom, isLast ? 0 : 18)
+        }
+        // TODO: attach actual time slots when itinerary responses include timing metadata.
+        .accessibilityElement(children: .contain)
     }
 
     private func errorCard(message: String) -> some View {

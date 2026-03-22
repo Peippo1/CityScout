@@ -29,6 +29,7 @@ struct MapHomeView: View {
     @State private var isShowingSavedPlaces = false
     @State private var selectedPlaceID: UUID?
     @State private var filterMode: MapFilterMode = .all
+    @State private var isShowingRoute = true
 
     init(destinationName: String) {
         self.destinationName = destinationName
@@ -57,13 +58,39 @@ struct MapHomeView: View {
         savedPlaces.filter(\.isItineraryDerived)
     }
 
+    private var validItineraryRoutePlaces: [SavedPlace] {
+        itineraryPlaces.filter { place in
+            place.latitude != 0 && place.longitude != 0
+        }
+    }
+
+    private var itineraryRouteCoordinates: [CLLocationCoordinate2D] {
+        validItineraryRoutePlaces.map(coordinate(for:))
+    }
+
     private var shouldShowItineraryEmptyState: Bool {
         filterMode == .itinerary && itineraryPlaces.isEmpty
+    }
+
+    private var shouldDrawItineraryRoute: Bool {
+        filterMode == .itinerary && isShowingRoute && itineraryRouteCoordinates.count >= 2
+    }
+
+    private var shouldShowRouteEmptyState: Bool {
+        filterMode == .itinerary
+        && shouldShowItineraryEmptyState == false
+        && validItineraryRoutePlaces.count < 2
     }
 
     var body: some View {
         MapReader { proxy in
             Map(position: $position) {
+                if shouldDrawItineraryRoute {
+                    MapPolyline(coordinates: itineraryRouteCoordinates)
+                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    // TODO: replace this straight-line path with route optimization when mapped itinerary data is richer.
+                }
+
                 ForEach(filteredSavedPlaces) { place in
                     Annotation(place.name, coordinate: coordinate(for: place), anchor: .bottom) {
                         savedPlaceAnnotation(for: place)
@@ -111,6 +138,15 @@ struct MapHomeView: View {
                     .accessibilityValue(
                         filterMode == .all ? "Show all places" : "Show itinerary places only"
                     )
+
+                    if filterMode == .itinerary {
+                        Toggle("Show Route", isOn: $isShowingRoute)
+                            .toggleStyle(.switch)
+                            .accessibilityLabel("Show Route")
+                            .accessibilityValue(isShowingRoute ? "On" : "Off")
+                    } else {
+                        EmptyView()
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
@@ -139,6 +175,15 @@ struct MapHomeView: View {
                     .padding()
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .padding()
+                } else if shouldShowRouteEmptyState {
+                    ContentUnavailableView(
+                        "Not enough mapped itinerary stops yet",
+                        systemImage: "point.topleft.down.curvedto.point.bottomright.up",
+                        description: Text("Save places with locations to visualise your route")
+                    )
+                    .padding()
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .padding()
                 } else {
                     EmptyView()
                 }
@@ -155,6 +200,7 @@ struct MapHomeView: View {
             }
             .animation(.easeInOut(duration: 0.2), value: selectedPlaceID)
             .animation(.easeInOut(duration: 0.2), value: filterMode)
+            .animation(.easeInOut(duration: 0.2), value: isShowingRoute)
             .onChange(of: filterMode) { _, _ in
                 guard let selectedPlaceID else { return }
                 if filteredSavedPlaces.contains(where: { $0.id == selectedPlaceID }) == false {
