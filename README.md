@@ -184,3 +184,9 @@ GitHub Actions builds and tests the app on push.
 ---
 
 CityScout is designed as a scalable travel platform — starting with learning and planning, and evolving into a full AI-powered travel companion.
+
+## 📜 License
+
+This project is proprietary and not open source.
+
+© 2026 Tim Finch. All rights reserved.
