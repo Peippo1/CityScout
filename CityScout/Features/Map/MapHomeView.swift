@@ -277,16 +277,16 @@ struct MapHomeView: View {
     private func annotationAccessibilityLabel(for place: SavedPlace) -> String {
         let categoryName = place.category?.displayName.lowercased() ?? "other"
         if place.isItineraryDerived {
-            return "\(place.name), from itinerary, \(place.destinationName)"
+            return "\(place.name), \(categoryName), from itinerary, \(place.destinationName)"
         }
         return "\(place.name), \(categoryName), \(place.destinationName)"
     }
 
     private func detailCardAccessibilityLabel(for place: SavedPlace) -> String {
-        if place.isItineraryDerived {
-            return "\(place.name), from itinerary, \(place.destinationName)"
-        }
         let categoryName = place.category?.displayName.lowercased() ?? "other"
+        if place.isItineraryDerived {
+            return "\(place.name), \(categoryName), from itinerary, \(place.destinationName)"
+        }
         return "\(place.name), \(categoryName), \(place.destinationName)"
     }
 

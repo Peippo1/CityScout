@@ -403,6 +403,7 @@ struct PlanHomeView: View {
 
     private func saveActivity(_ activity: String) {
         let trimmedActivity = normalizedActivityName(activity)
+        let inferredCategory = ItineraryCategoryInference.inferCategory(from: trimmedActivity)
 
         guard savedActivityNames.contains(trimmedActivity) == false else {
             return
@@ -426,6 +427,7 @@ struct PlanHomeView: View {
 
             try SavedPlaceService.savePlace(
                 name: trimmedActivity,
+                category: inferredCategory,
                 source: SavedPlace.Source.itinerary.rawValue,
                 destinationName: destinationName,
                 latitude: 0,
@@ -462,6 +464,7 @@ struct PlanHomeView: View {
             for activity in activitiesToSave where knownSavedNames.contains(activity) == false {
                 try SavedPlaceService.savePlace(
                     name: activity,
+                    category: ItineraryCategoryInference.inferCategory(from: activity),
                     source: SavedPlace.Source.itinerary.rawValue,
                     destinationName: destinationName,
                     latitude: 0,

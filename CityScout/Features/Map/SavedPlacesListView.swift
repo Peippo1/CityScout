@@ -151,8 +151,9 @@ struct SavedPlacesListView: View {
     }
 
     private func accessibilityLabel(for place: SavedPlace) -> String {
+        let categoryName = categoryTitle(for: place.category).lowercased()
         if place.isItineraryDerived {
-            return "\(place.name), from itinerary, \(place.destinationName)"
+            return "\(place.name), \(categoryName), from itinerary, \(place.destinationName)"
         }
         return "\(place.name), \(categoryTitle(for: place.category)), \(place.destinationName)"
     }
