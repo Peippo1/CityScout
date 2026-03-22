@@ -148,6 +148,12 @@ struct MapHomeView: View {
                             .stroke(Color.white.opacity(0.9), lineWidth: 2)
                     )
 
+                if place.isItineraryDerived {
+                    Circle()
+                        .stroke(style.tint.opacity(0.9), style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
+                        .frame(width: isSelected ? 42 : 38, height: isSelected ? 42 : 38)
+                }
+
                 Image(systemName: style.icon)
                     .font(isSelected ? .headline : .subheadline.weight(.semibold))
                     .foregroundStyle(.white)
@@ -169,10 +175,21 @@ struct MapHomeView: View {
                     .font(.title3.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(place.category?.displayName ?? "Other")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    Text(place.category?.displayName ?? "Other")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if place.isItineraryDerived {
+                        Text("From itinerary")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.14), in: Capsule(style: .continuous))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -211,6 +228,7 @@ struct MapHomeView: View {
         )
         .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
         .accessibilityElement(children: .contain)
+        .accessibilityLabel(detailCardAccessibilityLabel(for: place))
     }
 
     private func openInMapsButton(for place: SavedPlace) -> some View {
@@ -258,6 +276,17 @@ struct MapHomeView: View {
 
     private func annotationAccessibilityLabel(for place: SavedPlace) -> String {
         let categoryName = place.category?.displayName.lowercased() ?? "other"
+        if place.isItineraryDerived {
+            return "\(place.name), from itinerary, \(place.destinationName)"
+        }
+        return "\(place.name), \(categoryName), \(place.destinationName)"
+    }
+
+    private func detailCardAccessibilityLabel(for place: SavedPlace) -> String {
+        if place.isItineraryDerived {
+            return "\(place.name), from itinerary, \(place.destinationName)"
+        }
+        let categoryName = place.category?.displayName.lowercased() ?? "other"
         return "\(place.name), \(categoryName), \(place.destinationName)"
     }
 
@@ -299,6 +328,7 @@ struct MapHomeView: View {
         do {
             try SavedPlaceService.savePlace(
                 name: trimmedPendingName,
+                source: SavedPlace.Source.manual.rawValue,
                 destinationName: destinationName,
                 latitude: coordinate.latitude,
                 longitude: coordinate.longitude,

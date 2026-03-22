@@ -1,9 +1,19 @@
 import SwiftUI
 
 struct SavedPlacesListView: View {
+    private enum SavedPlacesFilter: String, CaseIterable, Identifiable {
+        case all = "All"
+        case itinerary = "Itinerary"
+        case other = "Other"
+
+        var id: String { rawValue }
+    }
+
     let destinationName: String
     let savedPlaces: [SavedPlace]
     let onSelectPlace: (SavedPlace) -> Void
+
+    @State private var selectedFilter: SavedPlacesFilter = .all
 
     private static let categoryOrder: [POICategory?] = [
         .food,
@@ -14,8 +24,19 @@ struct SavedPlacesListView: View {
         nil
     ]
 
+    private var filteredPlaces: [SavedPlace] {
+        switch selectedFilter {
+        case .all:
+            return savedPlaces
+        case .itinerary:
+            return savedPlaces.filter(\.isItineraryDerived)
+        case .other:
+            return savedPlaces.filter { $0.isItineraryDerived == false }
+        }
+    }
+
     private var groupedPlaces: [POICategory?: [SavedPlace]] {
-        Dictionary(grouping: savedPlaces) { $0.category }
+        Dictionary(grouping: filteredPlaces) { $0.category }
     }
 
     private var orderedCategories: [POICategory?] {
@@ -31,47 +52,93 @@ struct SavedPlacesListView: View {
                     description: Text("Save places in \(destinationName) from Explore or by long-pressing the map.")
                 )
             } else {
-                List {
-                    ForEach(orderedCategories, id: \.self) { category in
-                        Section {
-                            ForEach(sortedPlaces(in: category)) { place in
-                                Button {
-                                    onSelectPlace(place)
-                                } label: {
-                                    HStack(alignment: .top, spacing: 12) {
-                                        Image(systemName: categoryIcon(for: place.category))
-                                            .font(.subheadline)
-                                            .foregroundStyle(categoryTint(for: place.category))
-                                            .frame(width: 18)
-                                            .accessibilityHidden(true)
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(place.name)
-                                                .font(.headline)
-                                                .multilineTextAlignment(.leading)
-
-                                            Text(place.createdAt, format: Date.FormatStyle(date: .abbreviated, time: .shortened))
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityElement(children: .combine)
-                                .accessibilityLabel("\(place.name), \(categoryTitle(for: category))")
-                                .accessibilityHint("Shows this saved place on the map.")
-                            }
-                        } header: {
-                            Text(categoryTitle(for: category))
-                                .accessibilityAddTraits(.isHeader)
+                VStack(spacing: 0) {
+                    Picker("Saved place filter", selection: $selectedFilter) {
+                        ForEach(SavedPlacesFilter.allCases) { filter in
+                            Text(filter.rawValue).tag(filter)
                         }
                     }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+                    .accessibilityHint("Filters the saved places list by itinerary origin.")
+
+                    if filteredPlaces.isEmpty {
+                        ContentUnavailableView(
+                            "No Matching Places",
+                            systemImage: "line.3.horizontal.decrease.circle",
+                            description: Text(emptyFilterMessage)
+                        )
+                    } else {
+                        List {
+                            ForEach(orderedCategories, id: \.self) { category in
+                                Section {
+                                    ForEach(sortedPlaces(in: category)) { place in
+                                        Button {
+                                            onSelectPlace(place)
+                                        } label: {
+                                            HStack(alignment: .top, spacing: 12) {
+                                                Image(systemName: categoryIcon(for: place.category))
+                                                    .font(.subheadline)
+                                                    .foregroundStyle(categoryTint(for: place.category))
+                                                    .frame(width: 18)
+                                                    .accessibilityHidden(true)
+
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text(place.name)
+                                                        .font(.headline)
+                                                        .multilineTextAlignment(.leading)
+
+                                                    HStack(spacing: 8) {
+                                                        if place.isItineraryDerived {
+                                                            Text("From itinerary")
+                                                                .font(.caption2.weight(.semibold))
+                                                                .padding(.horizontal, 8)
+                                                                .padding(.vertical, 4)
+                                                                .background(
+                                                                    Color.accentColor.opacity(0.14),
+                                                                    in: Capsule(style: .continuous)
+                                                                )
+                                                                .foregroundStyle(Color.accentColor)
+                                                        }
+
+                                                        Text(place.createdAt, format: Date.FormatStyle(date: .abbreviated, time: .shortened))
+                                                            .font(.caption)
+                                                            .foregroundStyle(.secondary)
+                                                    }
+                                                }
+                                            }
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityElement(children: .combine)
+                                        .accessibilityLabel(accessibilityLabel(for: place))
+                                        .accessibilityHint("Shows this saved place on the map.")
+                                    }
+                                } header: {
+                                    Text(categoryTitle(for: category))
+                                        .accessibilityAddTraits(.isHeader)
+                                }
+                            }
+                        }
+                        .listStyle(.insetGrouped)
+                    }
                 }
-                .listStyle(.insetGrouped)
             }
         }
         .navigationTitle("Saved Places")
+    }
+
+    private var emptyFilterMessage: String {
+        switch selectedFilter {
+        case .all:
+            return "Save places in \(destinationName) from Explore or by long-pressing the map."
+        case .itinerary:
+            return "Save itinerary activities from Plan to see them here."
+        case .other:
+            return "Places saved from the map or Explore will appear here."
+        }
     }
 
     private func categoryTitle(for category: POICategory?) -> String {
@@ -81,6 +148,13 @@ struct SavedPlacesListView: View {
     private func sortedPlaces(in category: POICategory?) -> [SavedPlace] {
         (groupedPlaces[category] ?? [])
             .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func accessibilityLabel(for place: SavedPlace) -> String {
+        if place.isItineraryDerived {
+            return "\(place.name), from itinerary, \(place.destinationName)"
+        }
+        return "\(place.name), \(categoryTitle(for: place.category)), \(place.destinationName)"
     }
 
     private func categoryIcon(for category: POICategory?) -> String {

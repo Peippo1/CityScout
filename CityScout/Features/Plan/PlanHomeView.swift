@@ -1,6 +1,5 @@
 import SwiftData
 import SwiftUI
-import UIKit
 
 private enum PlanPreference: String, CaseIterable, Identifiable {
     case relaxed
@@ -427,6 +426,7 @@ struct PlanHomeView: View {
 
             try SavedPlaceService.savePlace(
                 name: trimmedActivity,
+                source: SavedPlace.Source.itinerary.rawValue,
                 destinationName: destinationName,
                 latitude: 0,
                 longitude: 0,
@@ -436,8 +436,6 @@ struct PlanHomeView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 savedActivityNames.insert(trimmedActivity)
             }
-
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -460,26 +458,21 @@ struct PlanHomeView: View {
 
             let existingPlaces = try modelContext.fetch(descriptor)
             var knownSavedNames = Set(existingPlaces.map(\.name).map(normalizedActivityName))
-            var didInsertNewPlace = false
 
             for activity in activitiesToSave where knownSavedNames.contains(activity) == false {
                 try SavedPlaceService.savePlace(
                     name: activity,
+                    source: SavedPlace.Source.itinerary.rawValue,
                     destinationName: destinationName,
                     latitude: 0,
                     longitude: 0,
                     in: modelContext
                 )
                 knownSavedNames.insert(activity)
-                didInsertNewPlace = true
             }
 
             withAnimation(.easeInOut(duration: 0.2)) {
                 savedActivityNames.formUnion(activitiesToSave)
-            }
-
-            if didInsertNewPlace {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
         } catch {
             errorMessage = error.localizedDescription

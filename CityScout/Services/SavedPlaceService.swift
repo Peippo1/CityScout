@@ -5,6 +5,7 @@ enum SavedPlaceService {
     static func savePlace(
         name: String,
         category: POICategory? = nil,
+        source: String? = nil,
         destinationName: String,
         latitude: Double,
         longitude: Double,
@@ -13,6 +14,7 @@ enum SavedPlaceService {
         let place = SavedPlace(
             name: name,
             category: category,
+            source: source,
             destinationName: destinationName,
             latitude: latitude,
             longitude: longitude

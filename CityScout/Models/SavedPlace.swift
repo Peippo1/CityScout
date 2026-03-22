@@ -3,9 +3,16 @@ import SwiftData
 
 @Model
 final class SavedPlace {
+    enum Source: String {
+        case manual
+        case poi
+        case itinerary
+    }
+
     var id: UUID
     var name: String
     var categoryRaw: String?
+    var source: String?
     var destinationName: String
     var latitude: Double
     var longitude: Double
@@ -21,10 +28,15 @@ final class SavedPlace {
         }
     }
 
+    var isItineraryDerived: Bool {
+        source == Source.itinerary.rawValue
+    }
+
     init(
         id: UUID = UUID(),
         name: String,
         category: POICategory? = nil,
+        source: String? = nil,
         destinationName: String = "",
         latitude: Double,
         longitude: Double,
@@ -33,6 +45,7 @@ final class SavedPlace {
         self.id = id
         self.name = name
         self.categoryRaw = category?.rawValue
+        self.source = source
         self.destinationName = destinationName
         self.latitude = latitude
         self.longitude = longitude
