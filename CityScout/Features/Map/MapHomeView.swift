@@ -136,7 +136,7 @@ struct MapHomeView: View {
         let style = categoryStyle(for: place.category)
         let isSelected = place.id == selectedPlaceID
 
-        Button {
+        return Button {
             selectedPlaceID = place.id
         } label: {
             ZStack {
@@ -152,6 +152,8 @@ struct MapHomeView: View {
                     Circle()
                         .stroke(style.tint.opacity(0.9), style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
                         .frame(width: isSelected ? 42 : 38, height: isSelected ? 42 : 38)
+                } else {
+                    EmptyView()
                 }
 
                 Image(systemName: style.icon)
@@ -188,6 +190,8 @@ struct MapHomeView: View {
                             .padding(.vertical, 4)
                             .background(Color.accentColor.opacity(0.14), in: Capsule(style: .continuous))
                             .foregroundStyle(Color.accentColor)
+                    } else {
+                        EmptyView()
                     }
                 }
             }
