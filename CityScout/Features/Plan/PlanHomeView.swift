@@ -85,6 +85,24 @@ struct PlanHomeView: View {
         ]
     }
 
+    private var allItineraryActivities: [String] {
+        var uniqueActivities: [String] = []
+
+        for activity in itinerarySections.flatMap(\.activities).map(normalizedActivityName) {
+            guard activity.isEmpty == false, uniqueActivities.contains(activity) == false else {
+                continue
+            }
+            uniqueActivities.append(activity)
+        }
+
+        return uniqueActivities
+    }
+
+    private var isEntireItinerarySaved: Bool {
+        allItineraryActivities.isEmpty == false
+        && allItineraryActivities.allSatisfy { savedActivityNames.contains($0) }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -233,9 +251,39 @@ struct PlanHomeView: View {
 
     private var itinerarySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Suggested Plan")
-                .font(.headline)
-                .padding(.horizontal)
+            HStack(alignment: .center, spacing: 12) {
+                Text("Suggested Plan")
+                    .font(.headline)
+
+                Spacer()
+
+                Button {
+                    saveAllActivities()
+                } label: {
+                    Label(isEntireItinerarySaved ? "Saved" : "Save All", systemImage: isEntireItinerarySaved ? "bookmark.fill" : "bookmark")
+                        .font(.subheadline.weight(.semibold))
+                        .labelStyle(.titleAndIcon)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(
+                                    isEntireItinerarySaved
+                                    ? Color.accentColor.opacity(0.18)
+                                    : Color(.tertiarySystemBackground)
+                                )
+                        )
+                        .foregroundStyle(isEntireItinerarySaved ? Color.accentColor : Color.primary)
+                        .opacity((isEntireItinerarySaved || isLoading) ? 0.85 : 1)
+                        .animation(.easeInOut(duration: 0.2), value: isEntireItinerarySaved)
+                }
+                .buttonStyle(.plain)
+                .disabled(isLoading || isEntireItinerarySaved)
+                .accessibilityLabel("Save all itinerary activities")
+                .accessibilityHint("Adds all activities in this itinerary to saved places")
+                .accessibilityValue(isEntireItinerarySaved ? "Saved" : "Not saved")
+            }
+            .padding(.horizontal)
 
             VStack(spacing: 12) {
                 ForEach(itinerarySections) { section in
@@ -390,6 +438,49 @@ struct PlanHomeView: View {
             }
 
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func saveAllActivities() {
+        let activitiesToSave = allItineraryActivities
+
+        guard activitiesToSave.isEmpty == false else {
+            return
+        }
+
+        do {
+            let destination = destinationName
+            let descriptor = FetchDescriptor<SavedPlace>(
+                predicate: #Predicate<SavedPlace> { place in
+                    place.destinationName == destination
+                }
+            )
+
+            let existingPlaces = try modelContext.fetch(descriptor)
+            var knownSavedNames = Set(existingPlaces.map(\.name).map(normalizedActivityName))
+            var didInsertNewPlace = false
+
+            for activity in activitiesToSave where knownSavedNames.contains(activity) == false {
+                try SavedPlaceService.savePlace(
+                    name: activity,
+                    destinationName: destinationName,
+                    latitude: 0,
+                    longitude: 0,
+                    in: modelContext
+                )
+                knownSavedNames.insert(activity)
+                didInsertNewPlace = true
+            }
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                savedActivityNames.formUnion(activitiesToSave)
+            }
+
+            if didInsertNewPlace {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
