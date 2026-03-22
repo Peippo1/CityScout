@@ -241,6 +241,7 @@ private struct SavedPlaceSearchDetailView: View {
     }
 
     private func openInMaps() {
+        // TODO: update deprecated MKPlacemark API for newer iOS SDK
         let placemark = MKPlacemark(
             coordinate: CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)
         )

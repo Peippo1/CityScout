@@ -420,7 +420,7 @@ struct PlanHomeView: View {
             let existingPlace = try modelContext.fetch(descriptor).first
             guard existingPlace == nil else {
                 withAnimation(.easeInOut(duration: 0.2)) {
-                    savedActivityNames.insert(trimmedActivity)
+                    _ = savedActivityNames.insert(trimmedActivity)
                 }
                 return
             }
@@ -436,7 +436,7 @@ struct PlanHomeView: View {
             )
 
             withAnimation(.easeInOut(duration: 0.2)) {
-                savedActivityNames.insert(trimmedActivity)
+                _ = savedActivityNames.insert(trimmedActivity)
             }
         } catch {
             errorMessage = error.localizedDescription

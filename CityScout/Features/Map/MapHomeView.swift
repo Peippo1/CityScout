@@ -354,6 +354,7 @@ struct MapHomeView: View {
     }
 
     private func openInMaps(for place: SavedPlace) {
+        // TODO: update deprecated MKPlacemark API for newer iOS SDK
         let placemark = MKPlacemark(coordinate: coordinate(for: place))
         let mapItem = MKMapItem(placemark: placemark)
         mapItem.name = place.name
