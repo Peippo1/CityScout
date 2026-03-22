@@ -1,7 +1,11 @@
 import json
 import logging
 
-from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
+try:
+    from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
+except ImportError:  # pragma: no cover - allows fallback behavior in local test environments
+    APIConnectionError = APITimeoutError = APIStatusError = Exception
+    OpenAI = None
 
 from app.core.config import settings
 from app.schemas.itinerary import ItineraryBlock, ItineraryRequest, ItineraryResponse
@@ -26,12 +30,20 @@ MODEL_NAME = "gpt-4o-mini"
 
 
 def generate_itinerary(request: ItineraryRequest) -> ItineraryResponse:
-    destination = request.destination.strip() or "your destination"
+    destination = request.destination or "your destination"
     preferences = _normalize_preferences(request.preferences)
 
-    logger.info("Generating itinerary for destination=%s preferences=%s", destination, preferences)
+    logger.info(
+        "Generating itinerary destination=%s preferences_count=%s saved_places_count=%s",
+        destination,
+        len(preferences),
+        len(request.saved_places),
+    )
 
     try:
+        if OpenAI is None:
+            raise RuntimeError("OpenAI SDK is not installed.")
+
         client = OpenAI(api_key=settings.require_openai_api_key(), timeout=20.0, max_retries=1)
         completion = client.chat.completions.create(
             model=MODEL_NAME,
@@ -47,21 +59,21 @@ def generate_itinerary(request: ItineraryRequest) -> ItineraryResponse:
         return _parse_itinerary_response(content, destination)
     except RuntimeError as error:
         logger.error("Configuration error while generating itinerary: %s", error)
-    except APITimeoutError as error:
-        logger.error("OpenAI timeout while generating itinerary for %s: %s", destination, error)
-    except APIConnectionError as error:
-        logger.error("OpenAI connection error while generating itinerary for %s: %s", destination, error)
+    except APITimeoutError:
+        logger.error("OpenAI timeout while generating itinerary for destination=%s", destination)
+    except APIConnectionError:
+        logger.error("OpenAI connection error while generating itinerary for destination=%s", destination)
     except APIStatusError as error:
         logger.error(
-            "OpenAI status error while generating itinerary for %s: status=%s request_id=%s",
+            "OpenAI status error while generating itinerary for destination=%s status=%s request_id=%s",
             destination,
             error.status_code,
             getattr(error, "request_id", None),
         )
-    except (json.JSONDecodeError, ValueError) as error:
-        logger.error("Invalid itinerary JSON for %s: %s", destination, error)
-    except Exception as error:
-        logger.error("Unexpected itinerary generation error for %s: %s", destination, error)
+    except (json.JSONDecodeError, ValueError):
+        logger.error("Invalid itinerary JSON received for destination=%s", destination)
+    except Exception:
+        logger.exception("Unexpected itinerary generation error for destination=%s", destination)
 
     return _generate_fallback_itinerary(request)
 
@@ -99,10 +111,10 @@ def _parse_itinerary_response(content: str, destination: str) -> ItineraryRespon
 
 
 def _generate_fallback_itinerary(request: ItineraryRequest) -> ItineraryResponse:
-    destination = request.destination.strip() or "your destination"
+    destination = request.destination or "your destination"
     preferences = _normalize_preferences(request.preferences)
     saved_places = [place.strip() for place in request.saved_places if place.strip()]
-    prompt = request.prompt.strip()
+    prompt = request.prompt
 
     morning_activities = [
         _morning_opening(destination, preferences, prompt),

@@ -38,6 +38,12 @@ If `8000` is already taken, the script will automatically use the next free port
 This uses the backend virtual environment directly, which avoids accidentally
 starting `uvicorn` from a different global Python installation.
 
+## Run Tests
+
+```bash
+pytest
+```
+
 ## Example Requests
 
 Health check:
