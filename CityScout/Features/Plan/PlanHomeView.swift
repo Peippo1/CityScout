@@ -262,27 +262,59 @@ struct PlanHomeView: View {
     }
 
     private var actionSection: some View {
-        Button {
-            Task {
-                await generateItinerary()
-            }
-        } label: {
-            HStack {
-                if isLoading {
-                    ProgressView()
-                        .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 12) {
+            Button {
+                Task {
+                    await generateItinerary()
                 }
+            } label: {
+                HStack {
+                    if isLoading && itinerary == nil {
+                        ProgressView()
+                            .accessibilityHidden(true)
+                    }
 
-                Text(isLoading ? "Generating..." : "Generate Itinerary")
-                    .fontWeight(.semibold)
+                    Text(isLoading && itinerary == nil ? "Generating..." : "Generate Itinerary")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
+            .buttonStyle(.borderedProminent)
+            .disabled(canGenerate == false || isLoading)
+            .accessibilityLabel("Generate itinerary")
+            .accessibilityHint("Generates a day plan using your prompt and selected preferences.")
+
+            if itinerary != nil {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Edit your preferences and regenerate to refine your plan")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button {
+                        Task {
+                            await regenerateItinerary()
+                        }
+                    } label: {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .accessibilityHidden(true)
+                            }
+
+                            Text(isLoading ? "Regenerating..." : "Regenerate Plan")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(canGenerate == false || isLoading)
+                    .accessibilityLabel("Regenerate itinerary")
+                    .accessibilityHint("Creates a new plan using your current preferences")
+                }
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .disabled(canGenerate == false || isLoading)
         .padding(.horizontal)
-        .accessibilityLabel("Generate itinerary")
-        .accessibilityHint("Generates a day plan using your prompt and selected preferences.")
     }
 
     private var itinerarySection: some View {
@@ -797,12 +829,25 @@ struct PlanHomeView: View {
 
     @MainActor
     private func generateItinerary() async {
+        await requestItinerary(resetPersistedSignature: true)
+    }
+
+    @MainActor
+    private func regenerateItinerary() async {
+        await requestItinerary(resetPersistedSignature: true)
+    }
+
+    @MainActor
+    private func requestItinerary(resetPersistedSignature: Bool) async {
         isLoading = true
         errorMessage = nil
-        persistedItinerarySignature = nil
+
+        if resetPersistedSignature {
+            persistedItinerarySignature = nil
+        }
 
         do {
-            itinerary = try await planAPIService.generateItinerary(
+            let nextItinerary = try await planAPIService.generateItinerary(
                 destination: destinationName,
                 prompt: trimmedPrompt,
                 preferences: selectedPreferences
@@ -810,6 +855,10 @@ struct PlanHomeView: View {
                     .map(\.title),
                 savedPlaces: []
             )
+
+            withAnimation(.easeInOut(duration: 0.25)) {
+                itinerary = nextItinerary
+            }
             await loadSavedActivities()
         } catch {
             errorMessage = error.localizedDescription
