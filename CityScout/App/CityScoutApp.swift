@@ -26,6 +26,7 @@ struct CityScoutApp: App {
             Phrase.self,
             SavedPhrase.self,
             SavedPlace.self,
+            SavedItinerary.self,
         ])
 
         // Use the default on-disk SwiftData store.
