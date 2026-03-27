@@ -466,7 +466,7 @@ struct PlanHomeView: View {
 
     private func saveActivity(_ activity: String) {
         let trimmedActivity = normalizedActivityName(activity)
-        let inferredCategory = ItineraryCategoryInference.inferCategory(from: trimmedActivity)
+        let resolvedPlace = resolvedSavedPlace(for: trimmedActivity)
 
         guard savedActivityNames.contains(trimmedActivity) == false else {
             return
@@ -474,9 +474,10 @@ struct PlanHomeView: View {
 
         do {
             let destination = destinationName
+            let resolvedName = normalizedActivityName(resolvedPlace.name)
             let descriptor = FetchDescriptor<SavedPlace>(
                 predicate: #Predicate<SavedPlace> { place in
-                    place.name == trimmedActivity && place.destinationName == destination
+                    place.name == resolvedName && place.destinationName == destination
                 }
             )
 
@@ -489,12 +490,12 @@ struct PlanHomeView: View {
             }
 
             try SavedPlaceService.savePlace(
-                name: trimmedActivity,
-                category: inferredCategory,
+                name: resolvedPlace.name,
+                category: resolvedPlace.category,
                 source: SavedPlace.Source.itinerary.rawValue,
                 destinationName: destinationName,
-                latitude: 0,
-                longitude: 0,
+                latitude: resolvedPlace.latitude,
+                longitude: resolvedPlace.longitude,
                 in: modelContext
             )
 
@@ -524,17 +525,24 @@ struct PlanHomeView: View {
             let existingPlaces = try modelContext.fetch(descriptor)
             var knownSavedNames = Set(existingPlaces.map(\.name).map(normalizedActivityName))
 
-            for activity in activitiesToSave where knownSavedNames.contains(activity) == false {
+            for activity in activitiesToSave {
+                let resolvedPlace = resolvedSavedPlace(for: activity)
+                let resolvedName = normalizedActivityName(resolvedPlace.name)
+
+                guard knownSavedNames.contains(resolvedName) == false else {
+                    continue
+                }
+
                 try SavedPlaceService.savePlace(
-                    name: activity,
-                    category: ItineraryCategoryInference.inferCategory(from: activity),
+                    name: resolvedPlace.name,
+                    category: resolvedPlace.category,
                     source: SavedPlace.Source.itinerary.rawValue,
                     destinationName: destinationName,
-                    latitude: 0,
-                    longitude: 0,
+                    latitude: resolvedPlace.latitude,
+                    longitude: resolvedPlace.longitude,
                     in: modelContext
                 )
-                knownSavedNames.insert(activity)
+                knownSavedNames.insert(resolvedName)
             }
 
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -547,6 +555,26 @@ struct PlanHomeView: View {
 
     private func normalizedActivityName(_ activity: String) -> String {
         activity.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func resolvedSavedPlace(for activity: String) -> ResolvedItineraryPlace {
+        if let poi = ItineraryPlaceMatcher.match(destinationName: destinationName, activityText: activity) {
+            print("ItineraryPlaceMatcher matched '\(activity)' to '\(poi.name)' in \(destinationName)")
+            return ResolvedItineraryPlace(
+                name: poi.name,
+                category: poi.category,
+                latitude: poi.latitude,
+                longitude: poi.longitude
+            )
+        }
+
+        print("ItineraryPlaceMatcher used fallback for '\(activity)' in \(destinationName)")
+        return ResolvedItineraryPlace(
+            name: activity,
+            category: ItineraryCategoryInference.inferCategory(from: activity),
+            latitude: 0,
+            longitude: 0
+        )
     }
 
     @MainActor
@@ -570,6 +598,13 @@ struct PlanHomeView: View {
 
         isLoading = false
     }
+}
+
+private struct ResolvedItineraryPlace {
+    let name: String
+    let category: POICategory?
+    let latitude: Double
+    let longitude: Double
 }
 
 #Preview {
