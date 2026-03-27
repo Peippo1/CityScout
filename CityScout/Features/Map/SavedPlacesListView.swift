@@ -79,10 +79,11 @@ struct SavedPlacesListView: View {
                                             onSelectPlace(place)
                                         } label: {
                                             HStack(alignment: .top, spacing: 12) {
-                                                Image(systemName: categoryIcon(for: place.category))
+                                                Image(systemName: rowIcon(for: place))
                                                     .font(.subheadline)
-                                                    .foregroundStyle(categoryTint(for: place.category))
+                                                    .foregroundStyle(rowTint(for: place))
                                                     .frame(width: 18)
+                                                    .opacity(place.isUnmatchedItineraryPlace ? 0.7 : 1)
                                                     .accessibilityHidden(true)
 
                                                 VStack(alignment: .leading, spacing: 4) {
@@ -91,16 +92,16 @@ struct SavedPlacesListView: View {
                                                         .multilineTextAlignment(.leading)
 
                                                     HStack(spacing: 8) {
-                                                        if place.isItineraryDerived {
-                                                            Text("From itinerary")
+                                                        if let itineraryBadgeText = place.itineraryBadgeText {
+                                                            Text(itineraryBadgeText)
                                                                 .font(.caption2.weight(.semibold))
                                                                 .padding(.horizontal, 8)
                                                                 .padding(.vertical, 4)
                                                                 .background(
-                                                                    Color.accentColor.opacity(0.14),
+                                                                    rowTint(for: place).opacity(place.isUnmatchedItineraryPlace ? 0.16 : 0.14),
                                                                     in: Capsule(style: .continuous)
                                                                 )
-                                                                .foregroundStyle(Color.accentColor)
+                                                                .foregroundStyle(rowTint(for: place))
                                                         }
 
                                                         Text(place.createdAt, format: Date.FormatStyle(date: .abbreviated, time: .shortened))
@@ -152,10 +153,10 @@ struct SavedPlacesListView: View {
 
     private func accessibilityLabel(for place: SavedPlace) -> String {
         let categoryName = categoryTitle(for: place.category).lowercased()
-        if place.isItineraryDerived {
-            return "\(place.name), \(categoryName), from itinerary, \(place.destinationName)"
+        if let itineraryState = place.itineraryAccessibilityState {
+            return "\(place.name), \(categoryName), \(itineraryState), \(place.destinationName)"
         }
-        return "\(place.name), \(categoryTitle(for: place.category)), \(place.destinationName)"
+        return "\(place.name), \(categoryName), \(place.destinationName)"
     }
 
     private func categoryIcon(for category: POICategory?) -> String {
@@ -177,6 +178,22 @@ struct SavedPlacesListView: View {
         case nil:
             return .red
         }
+    }
+
+    private func rowIcon(for place: SavedPlace) -> String {
+        if place.isUnmatchedItineraryPlace {
+            return "questionmark.circle.fill"
+        }
+
+        return categoryIcon(for: place.category)
+    }
+
+    private func rowTint(for place: SavedPlace) -> Color {
+        if place.isUnmatchedItineraryPlace {
+            return .orange
+        }
+
+        return categoryTint(for: place.category)
     }
 }
 

@@ -7,6 +7,12 @@ private struct SavedPlaceCategoryStyle {
     let tint: Color
 }
 
+private struct ItineraryBadgeStyle {
+    let text: String
+    let tint: Color
+    let backgroundOpacity: Double
+}
+
 struct MapHomeView: View {
     private enum MapFilterMode: String, CaseIterable, Identifiable {
         case all
@@ -252,27 +258,44 @@ struct MapHomeView: View {
         } label: {
             ZStack {
                 Circle()
-                    .fill(style.tint)
+                    .fill(annotationFillColor(for: place, baseTint: style.tint))
                     .frame(width: pinDiameter, height: pinDiameter)
                     .overlay(
                         Circle()
                             .stroke(Color.white.opacity(0.9), lineWidth: 2)
                     )
 
-                if place.isItineraryDerived {
+                if place.isMappedItineraryPlace {
+                    Circle()
+                        .stroke(style.tint.opacity(0.95), lineWidth: 2.5)
+                        .frame(width: ringDiameter, height: ringDiameter)
+                } else if place.isUnmatchedItineraryPlace {
                     Circle()
                         .stroke(style.tint.opacity(0.9), style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
                         .frame(width: ringDiameter, height: ringDiameter)
-                } else {
-                    EmptyView()
                 }
 
                 Image(systemName: style.icon)
                     .font(isSelected ? .headline : .subheadline.weight(.semibold))
                     .foregroundStyle(.white)
+
+                if place.isMappedItineraryPlace {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(style.tint, .white)
+                        .background(.thinMaterial, in: Circle())
+                        .offset(x: ringDiameter / 3.2, y: -ringDiameter / 3.2)
+                } else if place.isUnmatchedItineraryPlace {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.orange, .white)
+                        .background(.thinMaterial, in: Circle())
+                        .offset(x: ringDiameter / 3.2, y: -ringDiameter / 3.2)
+                }
             }
             .scaleEffect(isItineraryFocusMode ? 1.16 : (isSelected ? 1.12 : 1.0))
-            .shadow(color: .black.opacity(0.16), radius: 6, y: 3)
+            .opacity(place.isUnmatchedItineraryPlace ? 0.78 : 1)
+            .shadow(color: .black.opacity(place.isUnmatchedItineraryPlace ? 0.1 : 0.16), radius: 6, y: 3)
             .padding(6)
             .background(.thinMaterial, in: Circle())
         }
@@ -294,20 +317,27 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if place.isItineraryDerived {
-                        Text("From itinerary")
+                    if let badgeStyle = itineraryBadgeStyle(for: place) {
+                        Text(badgeStyle.text)
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.accentColor.opacity(0.14), in: Capsule(style: .continuous))
-                            .foregroundStyle(Color.accentColor)
-                    } else {
-                        EmptyView()
+                            .background(
+                                badgeStyle.tint.opacity(badgeStyle.backgroundOpacity),
+                                in: Capsule(style: .continuous)
+                            )
+                            .foregroundStyle(badgeStyle.tint)
                     }
                 }
             }
 
             VStack(alignment: .leading, spacing: 8) {
+                if let itineraryStatusText = place.itineraryStatusText {
+                    Label(itineraryStatusText, systemImage: place.isMappedItineraryPlace ? "checkmark.circle.fill" : "questionmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(place.isMappedItineraryPlace ? Color.accentColor : .orange)
+                }
+
                 Label("Coordinates: \(formattedCoordinates(for: place))", systemImage: "location")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -391,18 +421,54 @@ struct MapHomeView: View {
 
     private func annotationAccessibilityLabel(for place: SavedPlace) -> String {
         let categoryName = place.category?.displayName.lowercased() ?? "other"
-        if place.isItineraryDerived {
-            return "\(place.name), \(categoryName), from itinerary, \(place.destinationName)"
+        if let itineraryState = place.itineraryAccessibilityState {
+            return "\(place.name), \(categoryName), \(itineraryState), \(place.destinationName)"
         }
         return "\(place.name), \(categoryName), \(place.destinationName)"
     }
 
     private func detailCardAccessibilityLabel(for place: SavedPlace) -> String {
         let categoryName = place.category?.displayName.lowercased() ?? "other"
-        if place.isItineraryDerived {
-            return "\(place.name), \(categoryName), from itinerary, \(place.destinationName)"
+        if let itineraryState = place.itineraryAccessibilityState {
+            return "\(place.name), \(categoryName), \(itineraryState), \(place.destinationName)"
         }
         return "\(place.name), \(categoryName), \(place.destinationName)"
+    }
+
+    private func annotationFillColor(for place: SavedPlace, baseTint: Color) -> Color {
+        if place.isUnmatchedItineraryPlace {
+            return baseTint.opacity(0.58)
+        }
+
+        return baseTint
+    }
+
+    private func itineraryBadgeStyle(for place: SavedPlace) -> ItineraryBadgeStyle? {
+        if place.isMappedItineraryPlace {
+            return ItineraryBadgeStyle(
+                text: "From itinerary • Mapped",
+                tint: .accentColor,
+                backgroundOpacity: 0.14
+            )
+        }
+
+        if place.isUnmatchedItineraryPlace {
+            return ItineraryBadgeStyle(
+                text: "From itinerary • Not mapped yet",
+                tint: .orange,
+                backgroundOpacity: 0.16
+            )
+        }
+
+        if place.isItineraryDerived {
+            return ItineraryBadgeStyle(
+                text: "From itinerary",
+                tint: .accentColor,
+                backgroundOpacity: 0.14
+            )
+        }
+
+        return nil
     }
 
     private func categoryStyle(for category: POICategory?) -> SavedPlaceCategoryStyle {
