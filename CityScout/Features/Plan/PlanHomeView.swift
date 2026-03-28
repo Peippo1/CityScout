@@ -162,6 +162,7 @@ struct PlanHomeView: View {
             }
             .padding(.bottom)
         }
+        .background(Color.brandCream.ignoresSafeArea())
         .navigationTitle("\(destinationName) Plan")
         .task {
             await loadSavedActivities()
@@ -198,7 +199,11 @@ struct PlanHomeView: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color.brandSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.brandSage.opacity(0.12), lineWidth: 1)
         )
         .padding(.horizontal)
         .accessibilityElement(children: .combine)
@@ -211,7 +216,7 @@ struct PlanHomeView: View {
 
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+                    .fill(Color.brandSurface)
 
                 if trimmedPrompt.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
@@ -230,9 +235,14 @@ struct PlanHomeView: View {
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 140)
                     .padding(12)
+                    .background(Color.clear)
                     .accessibilityLabel("Day plan request")
                     .accessibilityHint("Describe how you want to spend your day in the city.")
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.brandSage.opacity(0.12), lineWidth: 1)
+            )
         }
         .padding(.horizontal)
     }
@@ -267,9 +277,9 @@ struct PlanHomeView: View {
                 .padding(.vertical, 10)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSelected ? Color.accentColor : Color(.secondarySystemBackground))
+                        .fill(isSelected ? Color.brandSage : Color.brandSurface)
                 )
-                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                .foregroundStyle(isSelected ? Color.brandGreenDark : Color.primary)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(preference.title)
@@ -296,6 +306,7 @@ struct PlanHomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .tint(.brandGreenDark)
             .disabled(canGenerate == false || isLoading)
             .accessibilityLabel("Generate itinerary")
             .accessibilityHint("Generates a day plan using your prompt and selected preferences.")
@@ -324,6 +335,7 @@ struct PlanHomeView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                    .tint(.brandSage)
                     .disabled(canGenerate == false || isLoading)
                     .accessibilityLabel("Regenerate itinerary")
                     .accessibilityHint("Creates a new plan using your current preferences")
@@ -353,11 +365,11 @@ struct PlanHomeView: View {
                             Capsule(style: .continuous)
                                 .fill(
                                     isEntireItinerarySaved
-                                    ? Color.accentColor.opacity(0.18)
-                                    : Color(.tertiarySystemBackground)
+                                    ? Color.brandSage.opacity(0.26)
+                                    : Color.brandSurface
                                 )
                         )
-                        .foregroundStyle(isEntireItinerarySaved ? Color.accentColor : Color.primary)
+                        .foregroundStyle(isEntireItinerarySaved ? Color.brandGreenDark : Color.primary)
                         .opacity((isEntireItinerarySaved || isLoading) ? 0.85 : 1)
                         .animation(.easeInOut(duration: 0.2), value: isEntireItinerarySaved)
                 }
@@ -384,11 +396,11 @@ struct PlanHomeView: View {
                             Capsule(style: .continuous)
                                 .fill(
                                     isCurrentItineraryPersisted
-                                    ? Color.accentColor.opacity(0.18)
-                                    : Color(.tertiarySystemBackground)
+                                    ? Color.brandPink.opacity(0.24)
+                                    : Color.brandSurface
                                 )
                         )
-                        .foregroundStyle(isCurrentItineraryPersisted ? Color.accentColor : Color.primary)
+                        .foregroundStyle(isCurrentItineraryPersisted ? Color.brandGreenDark : Color.primary)
                 }
                 .buttonStyle(.plain)
                 .disabled(isCurrentItineraryPersisted || itinerary == nil)
@@ -413,7 +425,7 @@ struct PlanHomeView: View {
                                 Image(systemName: "circle.fill")
                                     .font(.system(size: 7))
                                     .padding(.top, 6)
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(Color.brandSage)
                                     .accessibilityHidden(true)
 
                                 Text(activity)
@@ -430,7 +442,11 @@ struct PlanHomeView: View {
                     .padding(18)
                     .background(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.secondarySystemBackground))
+                            .fill(Color.brandSurface)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Color.brandSage.opacity(0.12), lineWidth: 1)
                     )
                     .accessibilityElement(children: .contain)
                 }
@@ -453,7 +469,11 @@ struct PlanHomeView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color(.secondarySystemBackground))
+                        .fill(Color.brandSurface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.brandPink.opacity(0.12), lineWidth: 1)
                 )
                 .padding(.horizontal)
                 .accessibilityElement(children: .combine)
@@ -500,7 +520,11 @@ struct PlanHomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color.brandSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.brandSage.opacity(0.12), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
     }
@@ -509,14 +533,14 @@ struct PlanHomeView: View {
         HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 0) {
                 Circle()
-                    .fill(Color.accentColor)
+                    .fill(Color.brandSage)
                     .frame(width: 12, height: 12)
                     .padding(.top, 6)
                     .accessibilityHidden(true)
 
                 if isLast == false {
                     Rectangle()
-                        .fill(Color.accentColor.opacity(0.25))
+                        .fill(Color.brandSage.opacity(0.3))
                         .frame(width: 2)
                         .frame(maxHeight: .infinity)
                         .padding(.top, 6)
@@ -553,7 +577,11 @@ struct PlanHomeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+                    .fill(Color.brandSurface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.brandPink.opacity(0.16), lineWidth: 1)
             )
             .padding(.horizontal)
             .accessibilityLabel("Planner error. \(message)")
@@ -613,9 +641,9 @@ struct PlanHomeView: View {
                 .padding(.vertical, 8)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSaved ? Color.accentColor.opacity(0.18) : Color(.tertiarySystemBackground))
+                        .fill(isSaved ? Color.brandSage.opacity(0.24) : Color.brandSurface)
                 )
-                .foregroundStyle(isSaved ? Color.accentColor : Color.primary)
+                .foregroundStyle(isSaved ? Color.brandGreenDark : Color.primary)
                 .opacity(isSaved ? 0.85 : 1)
                 .animation(.easeInOut(duration: 0.2), value: isSaved)
         }

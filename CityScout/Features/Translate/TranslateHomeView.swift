@@ -51,6 +51,7 @@ struct TranslateHomeView: View {
             }
             .padding(.bottom)
         }
+        .background(Color.brandCream.ignoresSafeArea())
     }
 
     private var introCard: some View {
@@ -73,7 +74,11 @@ struct TranslateHomeView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color.brandSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.brandPink.opacity(0.16), lineWidth: 1)
         )
         .padding(.horizontal)
         .accessibilityElement(children: .combine)
@@ -87,7 +92,7 @@ struct TranslateHomeView: View {
 
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+                    .fill(Color.brandSurface)
 
                 if inputText.isEmpty {
                     Text("Type a short travel phrase")
@@ -101,9 +106,14 @@ struct TranslateHomeView: View {
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 140)
                     .padding(10)
+                    .background(Color.clear)
                     .accessibilityLabel("Source text")
                     .accessibilityHint("Enter the phrase you want translated.")
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.brandSage.opacity(0.12), lineWidth: 1)
+            )
             .padding(.horizontal)
         }
     }
@@ -144,7 +154,11 @@ struct TranslateHomeView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+                    .fill(Color.brandSurface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.brandSage.opacity(0.12), lineWidth: 1)
             )
             .padding(.horizontal)
         }
@@ -167,6 +181,7 @@ struct TranslateHomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .tint(.brandGreenDark)
             .disabled(trimmedInputText.isEmpty || isTranslating)
             .accessibilityLabel("Translate phrase")
             .accessibilityHint("Starts translation for the current phrase.")
@@ -175,6 +190,7 @@ struct TranslateHomeView: View {
                 clearTranslation()
             }
             .buttonStyle(.bordered)
+            .tint(.brandSage)
             .accessibilityHint("Clears the source text, translated text, and any status message.")
         }
         .padding(.horizontal)
@@ -227,7 +243,11 @@ struct TranslateHomeView: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
+                    .fill(Color.brandSurface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.brandPink.opacity(0.16), lineWidth: 1)
             )
             .padding(.horizontal)
             .accessibilityElement(children: .contain)
@@ -254,6 +274,7 @@ struct TranslateHomeView: View {
                 .accessibilityHint("This device does not support the translation feature.")
             }
         }
+        .background(Color.brandCream.ignoresSafeArea())
     }
 
     private func swapLanguages() {

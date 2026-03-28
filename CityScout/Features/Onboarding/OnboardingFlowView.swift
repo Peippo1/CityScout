@@ -41,11 +41,21 @@ struct OnboardingFlowView: View {
                     hasSeenOnboarding = true
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(.brandGreenDark)
                 .accessibilityLabel("Get started")
                 .accessibilityHint("Finishes onboarding and opens destination selection.")
             }
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(
+                colors: [Color.brandCream, Color.brandSurface, Color.brandPink.opacity(0.12)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
         .onReceive(timer) { _ in
             guard currentPage < 2 else { return }
             withAnimation(.easeInOut(duration: 0.5)) {
@@ -64,12 +74,24 @@ private struct OnboardingPageView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: symbolName)
-                .font(.system(size: 72, weight: .regular, design: .default))
-                .foregroundStyle(Color.accentColor)
-                .scaleEffect(animateIcon ? 1.0 : 0.88)
-                .opacity(animateIcon ? 1.0 : 0.7)
-                .accessibilityHidden(true)
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.brandSage.opacity(0.28), Color.brandPink.opacity(0.22)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 128, height: 128)
+
+                Image(systemName: symbolName)
+                    .font(.system(size: 72, weight: .regular, design: .default))
+                    .foregroundStyle(Color.brandGreenDark)
+                    .scaleEffect(animateIcon ? 1.0 : 0.88)
+                    .opacity(animateIcon ? 1.0 : 0.7)
+                    .accessibilityHidden(true)
+            }
 
             Text(title)
                 .font(.title2)
@@ -85,6 +107,15 @@ private struct OnboardingPageView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.brandSage.opacity(0.14), lineWidth: 1)
+        )
         .onAppear {
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                 animateIcon = true

@@ -82,21 +82,16 @@ struct PhrasebookHomeView: View {
                                 NavigationLink {
                                     SavedPhraseDetailView(savedPhrase: savedPhrase)
                                 } label: {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(savedPhrase.targetText)
-                                            .font(.headline)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                        Text(savedPhrase.englishMeaning)
-                                            .foregroundStyle(.secondary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                        Text("\(savedPhrase.destinationName) • \(savedPhrase.situationTitle)")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
+                                    phraseRow(
+                                        targetText: savedPhrase.targetText,
+                                        meaning: savedPhrase.englishMeaning,
+                                        metadata: "\(savedPhrase.destinationName) • \(savedPhrase.situationTitle)",
+                                        accent: .brandPink
+                                    )
                                 }
                                 .accessibilityElement(children: .combine)
                                 .accessibilityHint("Opens the saved phrase details.")
+                                .listRowBackground(Color.clear)
                             }
                         }
                     }
@@ -105,27 +100,25 @@ struct PhrasebookHomeView: View {
                         NavigationLink {
                             SavedPhraseDetailView(savedPhrase: savedPhrase)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(savedPhrase.targetText)
-                                    .font(.headline)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(savedPhrase.englishMeaning)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text("\(savedPhrase.destinationName) • \(savedPhrase.situationTitle)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                            phraseRow(
+                                targetText: savedPhrase.targetText,
+                                meaning: savedPhrase.englishMeaning,
+                                metadata: "\(savedPhrase.destinationName) • \(savedPhrase.situationTitle)",
+                                accent: .brandSage
+                            )
                         }
                         .accessibilityElement(children: .combine)
                         .accessibilityHint("Opens the saved phrase details.")
+                        .listRowBackground(Color.clear)
                     }
                     .onDelete(perform: deleteSavedPhrases)
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color.brandCream)
             }
         }
+        .background(Color.brandCream.ignoresSafeArea())
         .navigationTitle("\(destinationName) Phrasebook")
         .searchable(text: $searchText, prompt: "Search phrases")
         .toolbar {
@@ -142,6 +135,43 @@ struct PhrasebookHomeView: View {
     private func matchesSearch(_ savedPhrase: SavedPhrase) -> Bool {
         savedPhrase.targetText.localizedCaseInsensitiveContains(searchText)
             || savedPhrase.englishMeaning.localizedCaseInsensitiveContains(searchText)
+    }
+
+    private func phraseRow(
+        targetText: String,
+        meaning: String,
+        metadata: String,
+        accent: Color
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Circle()
+                .fill(accent.opacity(0.24))
+                .frame(width: 12, height: 12)
+                .padding(.top, 6)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(targetText)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(meaning)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(metadata)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.brandSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
     }
 
     private func deleteSavedPhrases(at offsets: IndexSet) {

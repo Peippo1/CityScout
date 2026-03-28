@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import CoreLocation
+import Combine
 
 private struct SavedPlaceCategoryStyle {
     let icon: String
@@ -11,6 +13,59 @@ private struct ItineraryBadgeStyle {
     let text: String
     let tint: Color
     let backgroundOpacity: Double
+}
+
+private struct DestinationViewport {
+    let center: CLLocationCoordinate2D
+    let span: MKCoordinateSpan
+
+    var region: MKCoordinateRegion {
+        MKCoordinateRegion(center: center, span: span)
+    }
+}
+
+@MainActor
+private final class MapLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published var authorizationStatus: CLAuthorizationStatus
+    @Published var currentLocation: CLLocation?
+
+    private let manager = CLLocationManager()
+
+    override init() {
+        authorizationStatus = manager.authorizationStatus
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+    }
+
+    func requestCurrentLocation() {
+        switch authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.requestLocation()
+        case .notDetermined:
+            manager.requestWhenInUseAuthorization()
+        case .restricted, .denied:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+
+        if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
+            manager.requestLocation()
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        currentLocation = locations.last
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Ignore failures and let the UI fall back to destination-centred controls.
+    }
 }
 
 struct MapHomeView: View {
@@ -36,6 +91,8 @@ struct MapHomeView: View {
     @State private var selectedPlaceID: UUID?
     @State private var filterMode: MapFilterMode = .all
     @State private var isShowingRoute = true
+    @State private var hasCenteredOnDestination = false
+    @StateObject private var locationManager = MapLocationManager()
 
     init(destinationName: String) {
         self.destinationName = destinationName
@@ -88,12 +145,20 @@ struct MapHomeView: View {
         && validItineraryRoutePlaces.count < 2
     }
 
+    private var destinationViewport: DestinationViewport? {
+        Self.viewport(for: destinationName)
+    }
+
+    private var userLocationAvailable: Bool {
+        locationManager.currentLocation != nil
+    }
+
     var body: some View {
         MapReader { proxy in
             Map(position: $position) {
                 if shouldDrawItineraryRoute {
                     MapPolyline(coordinates: itineraryRouteCoordinates)
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                        .stroke(Color.brandSage, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
                     // TODO: replace this straight-line path with route optimization when mapped itinerary data is richer.
                 }
 
@@ -150,15 +215,36 @@ struct MapHomeView: View {
                             .toggleStyle(.switch)
                             .accessibilityLabel("Show Route")
                             .accessibilityValue(isShowingRoute ? "On" : "Off")
-                    } else {
-                        EmptyView()
+                    }
+
+                    HStack(spacing: 10) {
+                        Button("My Location") {
+                            centerOnUserLocation()
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(userLocationAvailable ? .brandGreenDark : .brandSage)
+                        .accessibilityLabel("My location")
+                        .accessibilityHint("Requests your current location and centers the map there when available.")
+
+                        Button("City") {
+                            centerOnDestination()
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.brandSage)
+                        .accessibilityLabel("Back to city")
+                        .accessibilityHint("Re-centers the map on \(destinationName).")
+
+                        Spacer()
                     }
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
                 .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.regularMaterial)
+                .background(
+                    Color.brandCream.opacity(0.92)
+                        .shadow(color: Color.brandGreenDark.opacity(0.08), radius: 10, y: 4)
+                )
             }
             .safeAreaInset(edge: .bottom) {
                 if let selectedPlace {
@@ -179,7 +265,7 @@ struct MapHomeView: View {
                         description: Text("Generate a plan to see your day on the map")
                     )
                     .padding()
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .background(Color.brandCream.opacity(0.94), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .padding()
                 } else if shouldShowRouteEmptyState {
                     ContentUnavailableView(
@@ -188,7 +274,7 @@ struct MapHomeView: View {
                         description: Text("Save places with locations to visualise your route")
                     )
                     .padding()
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .background(Color.brandCream.opacity(0.94), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .padding()
                 } else {
                     EmptyView()
@@ -207,11 +293,30 @@ struct MapHomeView: View {
             .animation(.easeInOut(duration: 0.2), value: selectedPlaceID)
             .animation(.easeInOut(duration: 0.2), value: filterMode)
             .animation(.easeInOut(duration: 0.2), value: isShowingRoute)
+            .task {
+                guard hasCenteredOnDestination == false else { return }
+                centerOnDestination()
+                hasCenteredOnDestination = true
+            }
+            .onChange(of: destinationName) { _, _ in
+                hasCenteredOnDestination = false
+                centerOnDestination()
+                hasCenteredOnDestination = true
+            }
             .onChange(of: filterMode) { _, _ in
                 guard let selectedPlaceID else { return }
                 if filteredSavedPlaces.contains(where: { $0.id == selectedPlaceID }) == false {
                     self.selectedPlaceID = nil
                 }
+            }
+            .onChange(of: locationManager.currentLocation) { _, location in
+                guard let location else { return }
+                position = .region(
+                    MKCoordinateRegion(
+                        center: location.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                    )
+                )
             }
         }
     }
@@ -335,7 +440,7 @@ struct MapHomeView: View {
                 if let itineraryStatusText = place.itineraryStatusText {
                     Label(itineraryStatusText, systemImage: place.isMappedItineraryPlace ? "checkmark.circle.fill" : "questionmark.circle.fill")
                         .font(.footnote)
-                        .foregroundStyle(place.isMappedItineraryPlace ? Color.accentColor : .orange)
+                        .foregroundStyle(place.isMappedItineraryPlace ? Color.brandGreenDark : .orange)
                 }
 
                 Label("Coordinates: \(formattedCoordinates(for: place))", systemImage: "location")
@@ -365,13 +470,13 @@ struct MapHomeView: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.regularMaterial)
+                .fill(Color.brandCream.opacity(0.96))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.08))
+                .strokeBorder(Color.brandSage.opacity(0.18))
         )
-        .shadow(color: .black.opacity(0.12), radius: 18, y: 8)
+        .shadow(color: Color.brandGreenDark.opacity(0.12), radius: 18, y: 8)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(detailCardAccessibilityLabel(for: place))
     }
@@ -381,6 +486,7 @@ struct MapHomeView: View {
             openInMaps(for: place)
         }
         .buttonStyle(.borderedProminent)
+        .tint(.brandGreenDark)
         .accessibilityLabel("Open \(place.name) in Maps")
         .accessibilityHint("Opens this location in the Maps app.")
     }
@@ -399,6 +505,7 @@ struct MapHomeView: View {
             selectedPlaceID = nil
         }
         .buttonStyle(.bordered)
+        .tint(.brandSage)
         .accessibilityLabel("Close place details")
         .accessibilityHint("Hides the saved place details card.")
     }
@@ -447,7 +554,7 @@ struct MapHomeView: View {
         if place.isMappedItineraryPlace {
             return ItineraryBadgeStyle(
                 text: "From itinerary • Mapped",
-                tint: .accentColor,
+                tint: .brandGreenDark,
                 backgroundOpacity: 0.14
             )
         }
@@ -463,7 +570,7 @@ struct MapHomeView: View {
         if place.isItineraryDerived {
             return ItineraryBadgeStyle(
                 text: "From itinerary",
-                tint: .accentColor,
+                tint: .brandSage,
                 backgroundOpacity: 0.14
             )
         }
@@ -547,6 +654,68 @@ struct MapHomeView: View {
                 span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
             )
         )
+    }
+
+    private func centerOnDestination() {
+        guard let destinationViewport else { return }
+        selectedPlaceID = nil
+        position = .region(destinationViewport.region)
+    }
+
+    private func centerOnUserLocation() {
+        if let location = locationManager.currentLocation {
+            selectedPlaceID = nil
+            position = .region(
+                MKCoordinateRegion(
+                    center: location.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                )
+            )
+            return
+        }
+
+        locationManager.requestCurrentLocation()
+    }
+
+    private static func viewport(for destinationName: String) -> DestinationViewport? {
+        switch destinationName {
+        case "Amsterdam":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 52.3676, longitude: 4.9041), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        case "Athens":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 37.9838, longitude: 23.7275), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
+        case "Barcelona":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 41.3874, longitude: 2.1686), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        case "Berlin":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 52.5200, longitude: 13.4050), span: MKCoordinateSpan(latitudeDelta: 0.24, longitudeDelta: 0.24))
+        case "Brussels":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 50.8503, longitude: 4.3517), span: MKCoordinateSpan(latitudeDelta: 0.16, longitudeDelta: 0.16))
+        case "Budapest":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 47.4979, longitude: 19.0402), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        case "Copenhagen":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 55.6761, longitude: 12.5683), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        case "Dublin":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 53.3498, longitude: -6.2603), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        case "Helsinki":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 60.1699, longitude: 24.9384), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
+        case "Lisbon":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 38.7223, longitude: -9.1393), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
+        case "Oslo":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 59.9139, longitude: 10.7522), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        case "Paris":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 48.8566, longitude: 2.3522), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
+        case "Prague":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 50.0755, longitude: 14.4378), span: MKCoordinateSpan(latitudeDelta: 0.16, longitudeDelta: 0.16))
+        case "Rome":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 41.9028, longitude: 12.4964), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
+        case "Stockholm":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 59.3293, longitude: 18.0686), span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2))
+        case "Vienna":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 48.2082, longitude: 16.3738), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        case "Warsaw":
+            return DestinationViewport(center: CLLocationCoordinate2D(latitude: 52.2297, longitude: 21.0122), span: MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18))
+        default:
+            return nil
+        }
     }
 
     private func clearPendingPlace() {

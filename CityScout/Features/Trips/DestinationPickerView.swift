@@ -39,22 +39,49 @@ struct DestinationPickerView: View {
                     Button {
                         selectedDestinationName = trip.destinationName
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(trip.destinationName)
-                                .font(.headline)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(trip.targetLanguage)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 14) {
+                            Image(systemName: "airplane.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(Color.brandGreenDark, Color.brandPink.opacity(0.45))
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(trip.destinationName)
+                                    .font(.headline)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(trip.targetLanguage)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.brandSage)
                         }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color.brandSurface)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.brandSage.opacity(0.14), lineWidth: 1)
+                        )
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("\(trip.destinationName), language \(trip.targetLanguage)")
                     .accessibilityHint("Opens CityScout for this destination.")
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color.brandCream)
             }
         }
+        .background(Color.brandCream.ignoresSafeArea())
         .navigationTitle("Where are you going?")
         .onAppear(perform: refreshSeedState)
         .onChange(of: hasSeeded) { _, _ in refreshSeedState() }
