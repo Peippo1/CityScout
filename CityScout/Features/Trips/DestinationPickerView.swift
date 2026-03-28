@@ -48,7 +48,7 @@ struct DestinationPickerView: View {
                                 Text(trip.destinationName)
                                     .font(.headline)
                                     .fixedSize(horizontal: false, vertical: true)
-                                Text(trip.targetLanguage)
+                                Text(languageDisplay(for: trip))
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -71,7 +71,7 @@ struct DestinationPickerView: View {
                         )
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(trip.destinationName), language \(trip.targetLanguage)")
+                    .accessibilityLabel("\(trip.destinationName), language \(languageDisplay(for: trip))")
                     .accessibilityHint("Opens CityScout for this destination.")
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -93,6 +93,47 @@ struct DestinationPickerView: View {
         var seenDestinations = Set<String>()
         return trips.filter { trip in
             seenDestinations.insert(trip.destinationName).inserted
+        }
+    }
+
+    private func languageDisplay(for trip: Trip) -> String {
+        switch trip.destinationName {
+        case "Amsterdam":
+            return "Dutch / Nederlands"
+        case "Athens":
+            return "Greek / Ελληνικά"
+        case "Barcelona":
+            return "Spanish / Español"
+        case "Berlin":
+            return "German / Deutsch"
+        case "Brussels":
+            return "French / Français"
+        case "Budapest":
+            return "Hungarian / Magyar"
+        case "Copenhagen":
+            return "Danish / Dansk"
+        case "Dublin":
+            return "Irish / Gaeilge"
+        case "Helsinki":
+            return "Finnish / Suomi"
+        case "Lisbon":
+            return "Portuguese / Português"
+        case "Oslo":
+            return "Norwegian / Norsk"
+        case "Paris":
+            return "French / Français"
+        case "Prague":
+            return "Czech / Čeština"
+        case "Rome":
+            return "Italian / Italiano"
+        case "Stockholm":
+            return "Swedish / Svenska"
+        case "Vienna":
+            return "German / Deutsch"
+        case "Warsaw":
+            return "Polish / Polski"
+        default:
+            return trip.targetLanguage
         }
     }
 

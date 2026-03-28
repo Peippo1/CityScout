@@ -8,7 +8,7 @@ struct TripShellView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                LessonsHomeView(destinationName: destinationName)
+                PlanHomeView(destinationName: destinationName)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Change City") {
@@ -20,7 +20,23 @@ struct TripShellView: View {
                     }
             }
             .tabItem {
-                Label("Lessons", systemImage: "book")
+                Label("Plan", systemImage: "calendar")
+            }
+
+            NavigationStack {
+                MapHomeView(destinationName: destinationName)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Change City") {
+                                selectedDestinationName = ""
+                            }
+                            .accessibilityLabel("Change city")
+                            .accessibilityHint("Returns to destination selection.")
+                        }
+                    }
+            }
+            .tabItem {
+                Label("Map", systemImage: "map")
             }
 
             NavigationStack {
@@ -56,7 +72,7 @@ struct TripShellView: View {
             }
 
             NavigationStack {
-                ExploreHomeView(destinationName: destinationName)
+                MoreHomeView(destinationName: destinationName)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Change City") {
@@ -68,55 +84,7 @@ struct TripShellView: View {
                     }
             }
             .tabItem {
-                Label("Explore", systemImage: "map")
-            }
-
-            NavigationStack {
-                SearchHomeView(destinationName: destinationName)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Change City") {
-                                selectedDestinationName = ""
-                            }
-                            .accessibilityLabel("Change city")
-                            .accessibilityHint("Returns to destination selection.")
-                        }
-                    }
-            }
-            .tabItem {
-                Label("Search", systemImage: "magnifyingglass")
-            }
-
-            NavigationStack {
-                PlanHomeView(destinationName: destinationName)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Change City") {
-                                selectedDestinationName = ""
-                            }
-                            .accessibilityLabel("Change city")
-                            .accessibilityHint("Returns to destination selection.")
-                        }
-                    }
-            }
-            .tabItem {
-                Label("Plan", systemImage: "calendar")
-            }
-
-            NavigationStack {
-                MapHomeView(destinationName: destinationName)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Change City") {
-                                selectedDestinationName = ""
-                            }
-                            .accessibilityLabel("Change city")
-                            .accessibilityHint("Returns to destination selection.")
-                        }
-                    }
-            }
-            .tabItem {
-                Label("Map", systemImage: "map")
+                Label("More", systemImage: "ellipsis.circle")
             }
         }
     }

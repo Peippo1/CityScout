@@ -83,7 +83,7 @@ struct MapHomeView: View {
     @Query
     private var savedPlaces: [SavedPlace]
 
-    @State private var position: MapCameraPosition = .automatic
+    @State private var position: MapCameraPosition
     @State private var pendingCoordinate: CLLocationCoordinate2D?
     @State private var pendingPlaceName = ""
     @State private var isShowingSaveSheet = false
@@ -96,6 +96,11 @@ struct MapHomeView: View {
 
     init(destinationName: String) {
         self.destinationName = destinationName
+        if let initialViewport = Self.viewport(for: destinationName) {
+            _position = State(initialValue: .region(initialViewport.region))
+        } else {
+            _position = State(initialValue: .automatic)
+        }
         _savedPlaces = Query(
             filter: #Predicate { place in
                 place.destinationName == destinationName

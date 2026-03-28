@@ -9,6 +9,19 @@ struct OnboardingFlowView: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            VStack(spacing: 8) {
+                Text("Welcome to CityScout")
+                    .font(.largeTitle.weight(.semibold))
+                    .foregroundStyle(Color.brandGreenDark)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                MultilingualGreetingView()
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Welcome to CityScout")
+            .accessibilityHint("A language-first travel companion.")
+
             TabView(selection: $currentPage) {
                 OnboardingPageView(
                     title: "Learn Key Phrases Offline",
@@ -60,6 +73,33 @@ struct OnboardingFlowView: View {
             guard currentPage < 2 else { return }
             withAnimation(.easeInOut(duration: 0.5)) {
                 currentPage += 1
+            }
+        }
+    }
+}
+
+private struct MultilingualGreetingView: View {
+    private let greetings = ["Welcome", "Hola", "Bonjour", "Γεια σου", "Ciao", "Hej", "Olá"]
+    private let timer = Timer.publish(every: 3.2, on: .main, in: .common).autoconnect()
+
+    @State private var index = 0
+
+    var body: some View {
+        ZStack {
+            ForEach(greetings.indices, id: \.self) { greetingIndex in
+                Text(greetings[greetingIndex])
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(Color.brandGreenDark.opacity(0.75))
+                    .opacity(greetingIndex == index ? 1 : 0)
+                    .offset(y: greetingIndex == index ? 0 : 8)
+                    .blur(radius: greetingIndex == index ? 0 : 2)
+            }
+        }
+        .frame(height: 24)
+        .accessibilityHidden(true)
+        .onReceive(timer) { _ in
+            withAnimation(.easeInOut(duration: 0.6)) {
+                index = (index + 1) % greetings.count
             }
         }
     }
