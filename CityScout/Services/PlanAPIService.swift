@@ -32,7 +32,7 @@ struct PlanAPIService {
         case invalidBaseURL
         case invalidResponse
         case serverError(statusCode: Int)
-        case requestFailed
+        case backendUnavailable
         case decodingFailed
 
         var errorDescription: String? {
@@ -43,21 +43,30 @@ struct PlanAPIService {
                 return "The planner service returned an unexpected response."
             case .serverError(let statusCode):
                 return "The planner service returned an error (\(statusCode))."
-            case .requestFailed:
-                return "The planner request could not be completed."
+            case .backendUnavailable:
+                return "The planner service is unavailable right now."
             case .decodingFailed:
                 return "The planner response could not be read."
             }
         }
     }
 
-    // The iOS Simulator can use http://127.0.0.1:8000 when the FastAPI backend runs on the host Mac.
-    private let baseURLString = "http://127.0.0.1:8000"
+    // The iOS Simulator can often use 127.0.0.1 when the backend runs on the same Mac.
+    // Real devices need a reachable host URL instead, such as a LAN IP, tunnel, or deployed backend.
+    private let environment: AppEnvironment
     private let session: URLSession
 
-    init(session: URLSession = .shared) {
+    init(
+        environment: AppEnvironment = AppEnvironment.current,
+        session: URLSession = .shared
+    ) {
+        self.environment = environment
         self.session = session
     }
+
+    var baseURLString: String { environment.baseURLString }
+
+    // TODO: Keep backend selection aligned with the release channel before TestFlight distribution.
 
     func generateItinerary(
         destination: String,
@@ -65,6 +74,8 @@ struct PlanAPIService {
         preferences: [String],
         savedPlaces: [String]
     ) async throws -> ItineraryResponse {
+        let baseURLString = environment.baseURLString
+
         guard let url = URL(string: "\(baseURLString)/plan-itinerary") else {
             throw ServiceError.invalidBaseURL
         }
@@ -88,7 +99,7 @@ struct PlanAPIService {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
-            throw ServiceError.requestFailed
+            throw ServiceError.backendUnavailable
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {

@@ -148,6 +148,7 @@ struct PlanHomeView: View {
                 promptCard
                 preferencesSection
                 actionSection
+                debugBackendSection
 
                 if let errorMessage {
                     errorCard(message: errorMessage)
@@ -165,6 +166,21 @@ struct PlanHomeView: View {
         .task {
             await loadSavedActivities()
         }
+    }
+
+    private var activeBackendBaseURL: String {
+        planAPIService.baseURLString
+    }
+
+    @ViewBuilder
+    private var debugBackendSection: some View {
+        #if DEBUG
+        // TODO: Remove this debug-only backend display before broader external release builds.
+        Text("DEBUG Backend: \(activeBackendBaseURL)")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal)
+        #endif
     }
 
     private var introCard: some View {
@@ -861,10 +877,23 @@ struct PlanHomeView: View {
             }
             await loadSavedActivities()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingPlannerErrorMessage(for: error)
         }
 
         isLoading = false
+    }
+
+    private func userFacingPlannerErrorMessage(for error: Error) -> String {
+        if let serviceError = error as? PlanAPIService.ServiceError {
+            switch serviceError {
+            case .backendUnavailable:
+                return "Itinerary generation is unavailable right now because CityScout cannot reach the planner backend. Please try again shortly once a reachable backend host is available."
+            default:
+                return serviceError.localizedDescription
+            }
+        }
+
+        return error.localizedDescription
     }
 }
 
