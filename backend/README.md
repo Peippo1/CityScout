@@ -1,8 +1,8 @@
 # CityScout Backend
 
-This backend is a lightweight FastAPI service for CityScout. Its job is to sit between the iOS app and future AI itinerary generation so API keys and orchestration logic stay on the server.
+This backend is a lightweight FastAPI service for CityScout. It sits between the iOS app and OpenAI so API keys and orchestration logic stay on the server.
 
-For now, the itinerary endpoint returns structured mocked JSON. The project is set up so the mock service can later be replaced with a real OpenAI-backed implementation without changing the route contract.
+It includes a simple shared-secret header check and in-memory rate limiting for private testing. This is not full user authentication.
 
 ## Create a Virtual Environment
 
@@ -24,7 +24,15 @@ source .venv/bin/activate
 cp .env.example .env
 ```
 
-Update `.env` when you are ready to add a real OpenAI integration.
+Update `.env` for local development and private testing.
+
+Required variables:
+- `APP_ENV` (development, test, staging, production)
+- `OPENAI_API_KEY`
+- `APP_SHARED_SECRET`
+
+Optional variables:
+- `APP_ALLOWED_ORIGIN` or `APP_ALLOWED_ORIGINS` (comma-separated) for staging/testing CORS
 
 ## Run Locally
 
@@ -56,6 +64,7 @@ Plan itinerary:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/plan-itinerary \
+  -H "X-CityScout-App-Secret: your_shared_secret" \
   -H "Content-Type: application/json" \
   -d '{
     "destination": "Paris",

@@ -57,23 +57,23 @@ def generate_itinerary(request: ItineraryRequest) -> ItineraryResponse:
         if not content:
             raise ValueError("OpenAI returned an empty response.")
         return _parse_itinerary_response(content, destination)
-    except RuntimeError as error:
-        logger.error("Configuration error while generating itinerary: %s", error)
+    except RuntimeError:
+        logger.error("Itinerary generation failed category=config_error destination=%s", destination)
     except APITimeoutError:
-        logger.error("OpenAI timeout while generating itinerary for destination=%s", destination)
+        logger.error("Itinerary generation failed category=openai_timeout destination=%s", destination)
     except APIConnectionError:
-        logger.error("OpenAI connection error while generating itinerary for destination=%s", destination)
+        logger.error("Itinerary generation failed category=openai_connection_error destination=%s", destination)
     except APIStatusError as error:
         logger.error(
-            "OpenAI status error while generating itinerary for destination=%s status=%s request_id=%s",
+            "Itinerary generation failed category=openai_status_error destination=%s status=%s request_id=%s",
             destination,
             error.status_code,
             getattr(error, "request_id", None),
         )
     except (json.JSONDecodeError, ValueError):
-        logger.error("Invalid itinerary JSON received for destination=%s", destination)
+        logger.error("Itinerary generation failed category=invalid_json destination=%s", destination)
     except Exception:
-        logger.exception("Unexpected itinerary generation error for destination=%s", destination)
+        logger.exception("Itinerary generation failed category=unexpected destination=%s", destination)
 
     return _generate_fallback_itinerary(request)
 

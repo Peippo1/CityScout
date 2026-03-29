@@ -1,25 +1,20 @@
-import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import settings
 from app.routes.itinerary import router as itinerary_router
 
 
 app = FastAPI(title="CityScout Backend", version="0.1.0")
 
-if os.getenv("APP_ENV", "development").lower() == "development":
+cors_origins = settings.cors_origins()
+if cors_origins:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-        ],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-CityScout-App-Secret"],
     )
 
 
