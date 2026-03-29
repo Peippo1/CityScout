@@ -228,7 +228,7 @@ struct MapHomeView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(userLocationAvailable ? .brandGreenDark : .brandSage)
-                        .accessibilityLabel("My location")
+                        .accessibilityLabel("Show my location")
                         .accessibilityHint("Requests your current location and centers the map there when available.")
 
                         Button("City") {
@@ -236,7 +236,7 @@ struct MapHomeView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(.brandSage)
-                        .accessibilityLabel("Back to city")
+                        .accessibilityLabel("Show selected city")
                         .accessibilityHint("Re-centers the map on \(destinationName).")
 
                         Spacer()

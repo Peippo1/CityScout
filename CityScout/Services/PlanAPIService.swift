@@ -31,6 +31,7 @@ struct PlanAPIService {
     enum ServiceError: LocalizedError {
         case invalidBaseURL
         case invalidResponse
+        case unauthorized
         case serverError(statusCode: Int)
         case backendUnavailable
         case decodingFailed
@@ -41,6 +42,8 @@ struct PlanAPIService {
                 return "The planner service URL is invalid."
             case .invalidResponse:
                 return "The planner service returned an unexpected response."
+            case .unauthorized:
+                return "Service unavailable. Please try again."
             case .serverError(let statusCode):
                 return "The planner service returned an error (\(statusCode))."
             case .backendUnavailable:
@@ -83,6 +86,7 @@ struct PlanAPIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(environment.appSharedSecret, forHTTPHeaderField: "X-CityScout-App-Secret")
         request.timeoutInterval = 20
         request.httpBody = try JSONEncoder().encode(
             ItineraryRequest(
@@ -104,6 +108,10 @@ struct PlanAPIService {
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ServiceError.invalidResponse
+        }
+
+        if httpResponse.statusCode == 401 {
+            throw ServiceError.unauthorized
         }
 
         guard 200 ..< 300 ~= httpResponse.statusCode else {

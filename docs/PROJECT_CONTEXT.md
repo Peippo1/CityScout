@@ -1,20 +1,32 @@
 # CityScout – Project Context
 
 ## Product Vision
-CityScout is an offline-first iOS travel companion that helps users access essential city phrases and guidance reliably, even with poor or no connectivity.
+CityScout is a city-first iOS travel companion that helps people travel like a local. It is language-first but not language-only, combining learning, planning, and in-trip utility in a premium, soft, modern brand direction.
 
 ## Current Phase
-V1 stabilisation
+Pre-TestFlight hardening
 
 ## Core Principles
-- Offline-first by default for critical user journeys.
-- Predictable navigation with stable flows and minimal surprises.
-- Clean architecture with clear boundaries between UI, domain logic, and data.
+- Destination-scoped UX and data model.
+- Local-first persistence for core flows.
+- Clear boundary between app and backend API.
+- Predictable navigation with stable flows.
 - Feature-first folder structure.
 - No business logic inside SwiftUI views.
 
-## Repository Structure
+## Current UX Direction
+- Calm, premium, soft visual language with restrained color and strong typography.
+- City-first framing across onboarding, explore, map, and plan.
+- Planning and in-trip usage should feel seamless, not separate modes.
+- Clarity over density: prioritize legibility and confident defaults.
 
+## Do Not Break
+- Destination-scoped architecture (all data and queries scoped to a selected city).
+- Local-first persistence for saved places and itineraries.
+- Backend API boundary (no OpenAI keys or AI logic in the app).
+- Category-aware integration across map, search, and planning.
+
+## Repository Structure
 ```text
 CityScout/
 ├── App/
@@ -28,9 +40,9 @@ CityScout/
 ## Data Layer
 
 ### Seed System Rules
-- Seed data is loaded from `Resources/SeedContent/*.json` (currently Barcelona and Paris content).
+- Seed data is loaded from `Resources/SeedContent/*.json` for multiple cities.
 - Seed imports must be idempotent: re-running a seed import must not duplicate records or corrupt state.
-- Seed version flags must gate migrations/imports so each seed version is applied exactly as intended.
+- Seed version flags must gate migrations/imports so each seed version is applied exactly once.
 - `SeedBootstrapper` runs at startup and should only apply new/required seed versions.
 
 ### SwiftData Guardrails
@@ -89,13 +101,13 @@ This rule is critical. Most navigation crashes in SwiftData-based apps come from
 
 ## Definition of Done
 - Feature behavior matches scope and is testable in simulator.
-- Offline-first behavior is preserved for core V1 flows.
+- Destination-scoped architecture and local-first persistence are preserved.
 - Navigation paths are predictable and stable.
 - Seed import path remains idempotent and version-gated.
 - No regressions to architecture rules or coding standards above.
 - CI build and tests pass on the configured workflow.
 
 ## Current Status
-- Barcelona + Paris seed data working.
-- Lessons navigation working.
-- `DebugDiagnostics.swift` exists for logging (safe to remove before production).
+- Destination-scoped onboarding, explore, map, search, and planning are live.
+- Itinerary generation, save item/all, and persistence are in place.
+- Backend validation and tests cover itinerary generation.
