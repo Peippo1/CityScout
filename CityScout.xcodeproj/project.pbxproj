@@ -402,6 +402,8 @@
 				DEVELOPMENT_TEAM = 7R7D9B87LW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CITYSCOUT_API_BASE_URL = "http://127.0.0.1:8000";
+				INFOPLIST_KEY_CITYSCOUT_APP_SHARED_SECRET = "change_me_for_private_testing";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "CityScout uses your location to show your position on the map while you travel.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -436,6 +438,8 @@
 				DEVELOPMENT_TEAM = 7R7D9B87LW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CITYSCOUT_API_BASE_URL = "http://127.0.0.1:8000";
+				INFOPLIST_KEY_CITYSCOUT_APP_SHARED_SECRET = "change_me_for_private_testing";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "CityScout uses your location to show your position on the map while you travel.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

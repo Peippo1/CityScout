@@ -6,7 +6,28 @@ enum AppEnvironment {
 
     static let current: AppEnvironment = .localDevelopment
 
+    private static let apiBaseURLInfoKey = "CITYSCOUT_API_BASE_URL"
+    private static let appSharedSecretInfoKey = "CITYSCOUT_APP_SHARED_SECRET"
+    private static let apiBaseURLEnvKey = "CITYSCOUT_API_BASE_URL"
+    private static let appSharedSecretEnvKey = "CITYSCOUT_APP_SHARED_SECRET"
+
     var baseURLString: String {
+        resolvedValue(
+            infoKey: Self.apiBaseURLInfoKey,
+            environmentKey: Self.apiBaseURLEnvKey,
+            fallback: defaultBaseURLString
+        )
+    }
+
+    var appSharedSecret: String {
+        resolvedValue(
+            infoKey: Self.appSharedSecretInfoKey,
+            environmentKey: Self.appSharedSecretEnvKey,
+            fallback: defaultAppSharedSecret
+        )
+    }
+
+    private var defaultBaseURLString: String {
         switch self {
         case .localDevelopment:
             return "http://127.0.0.1:8000"
@@ -15,17 +36,35 @@ enum AppEnvironment {
         }
     }
 
-    var appSharedSecret: String {
+    private var defaultAppSharedSecret: String {
         switch self {
         case .localDevelopment:
-            // TODO: Replace with secure approach for production.
+            // TODO: Replace with a stronger private-testing and release configuration path.
             return "change_me_for_private_testing"
         case .staging:
-            // TODO: Replace with secure approach for production.
+            // TODO: Replace with a stronger private-testing and release configuration path.
             return "change_me_for_private_testing"
         }
     }
 
-    // TODO: Use an HTTPS production backend before broader external testing.
-    // TODO: Replace this compile-time default with a TestFlight-safe backend configuration path.
+    private func resolvedValue(infoKey: String, environmentKey: String, fallback: String) -> String {
+        if let infoValue = Bundle.main.object(forInfoDictionaryKey: infoKey) as? String {
+            let trimmed = infoValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty == false {
+                return trimmed
+            }
+        }
+
+        if let environmentValue = ProcessInfo.processInfo.environment[environmentKey] {
+            let trimmed = environmentValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty == false {
+                return trimmed
+            }
+        }
+
+        return fallback
+    }
+
+    // TODO: Use an HTTPS backend before broader external testing.
+    // TODO: Set build-configuration-specific Info.plist values for simulator, device, and release channels.
 }

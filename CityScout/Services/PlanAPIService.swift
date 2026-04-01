@@ -1,6 +1,8 @@
 import Foundation
 
 struct PlanAPIService {
+    private static let plannerPath = "/plan-itinerary"
+
     struct ItineraryRequest: Codable {
         let destination: String
         let prompt: String
@@ -30,24 +32,36 @@ struct PlanAPIService {
 
     enum ServiceError: LocalizedError {
         case invalidBaseURL
+        case requestEncodingFailed
         case invalidResponse
         case unauthorized
+        case forbidden
+        case rateLimited
         case serverError(statusCode: Int)
-        case backendUnavailable
+        case transportError(URLError?)
+        case emptyResponse
         case decodingFailed
 
         var errorDescription: String? {
             switch self {
             case .invalidBaseURL:
                 return "The planner service URL is invalid."
+            case .requestEncodingFailed:
+                return "The planner request could not be prepared."
             case .invalidResponse:
                 return "The planner service returned an unexpected response."
             case .unauthorized:
                 return "Service unavailable. Please try again."
+            case .forbidden:
+                return "The planner service rejected this request."
+            case .rateLimited:
+                return "The planner service is busy right now. Please try again in a moment."
             case .serverError(let statusCode):
                 return "The planner service returned an error (\(statusCode))."
-            case .backendUnavailable:
+            case .transportError:
                 return "The planner service is unavailable right now."
+            case .emptyResponse:
+                return "The planner service returned an empty response."
             case .decodingFailed:
                 return "The planner response could not be read."
             }
@@ -77,51 +91,106 @@ struct PlanAPIService {
         preferences: [String],
         savedPlaces: [String]
     ) async throws -> ItineraryResponse {
-        let baseURLString = environment.baseURLString
+        let request = try makeRequest(
+            destination: destination,
+            prompt: prompt,
+            preferences: preferences,
+            savedPlaces: savedPlaces
+        )
 
-        guard let url = URL(string: "\(baseURLString)/plan-itinerary") else {
-            throw ServiceError.invalidBaseURL
-        }
+        let data = try await performRequest(request)
+        return try decodeResponse(from: data)
+    }
 
+    private func makeRequest(
+        destination: String,
+        prompt: String,
+        preferences: [String],
+        savedPlaces: [String]
+    ) throws -> URLRequest {
+        let url = try endpointURL()
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(environment.appSharedSecret, forHTTPHeaderField: "X-CityScout-App-Secret")
         request.timeoutInterval = 20
-        request.httpBody = try JSONEncoder().encode(
-            ItineraryRequest(
-                destination: destination,
-                prompt: prompt,
-                preferences: preferences,
-                savedPlaces: savedPlaces
-            )
-        )
-
-        let data: Data
-        let response: URLResponse
 
         do {
-            (data, response) = try await session.data(for: request)
+            request.httpBody = try JSONEncoder().encode(
+                ItineraryRequest(
+                    destination: destination,
+                    prompt: prompt,
+                    preferences: preferences,
+                    savedPlaces: savedPlaces
+                )
+            )
         } catch {
-            throw ServiceError.backendUnavailable
+            throw ServiceError.requestEncodingFailed
+        }
+
+        return request
+    }
+
+    private func endpointURL() throws -> URL {
+        guard var components = URLComponents(string: environment.baseURLString) else {
+            throw ServiceError.invalidBaseURL
+        }
+
+        let normalizedPath = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        components.path = normalizedPath.isEmpty ? Self.plannerPath : "/\(normalizedPath)\(Self.plannerPath)"
+
+        guard let url = components.url else {
+            throw ServiceError.invalidBaseURL
+        }
+
+        return url
+    }
+
+    private func performRequest(_ request: URLRequest) async throws -> Data {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError {
+            debugLog("Planner request transport error code=\(urlError.code.rawValue)")
+            throw ServiceError.transportError(urlError)
+        } catch {
+            debugLog("Planner request failed with non-URL transport error")
+            throw ServiceError.transportError(nil)
         }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ServiceError.invalidResponse
         }
 
-        if httpResponse.statusCode == 401 {
+        switch httpResponse.statusCode {
+        case 200 ..< 300:
+            guard data.isEmpty == false else {
+                throw ServiceError.emptyResponse
+            }
+            return data
+        case 401:
             throw ServiceError.unauthorized
-        }
-
-        guard 200 ..< 300 ~= httpResponse.statusCode else {
+        case 403:
+            throw ServiceError.forbidden
+        case 429:
+            throw ServiceError.rateLimited
+        default:
             throw ServiceError.serverError(statusCode: httpResponse.statusCode)
         }
+    }
 
+    private func decodeResponse(from data: Data) throws -> ItineraryResponse {
         do {
             return try JSONDecoder().decode(ItineraryResponse.self, from: data)
         } catch {
             throw ServiceError.decodingFailed
         }
+    }
+
+    private func debugLog(_ message: String) {
+        #if DEBUG
+        print("PlanAPIService: \(message)")
+        #endif
     }
 }

@@ -30,6 +30,13 @@ It helps people travel like a local with language support, planning tools, and i
 - Real-device testing requires backend environment configuration (API base URL and server secrets)
 - TestFlight is a near-term target
 
+## App Backend Config
+- The iOS app reads backend config from generated Info.plist keys when available:
+- `CITYSCOUT_API_BASE_URL`
+- `CITYSCOUT_APP_SHARED_SECRET`
+- For local development, the current defaults still point at `http://127.0.0.1:8000`
+- For physical-device testing, set the app target build settings to a reachable backend host instead of localhost
+
 ## Backend Setup
 ```bash
 cd backend
