@@ -49,6 +49,210 @@ private struct PlanSection: Identifiable {
     var id: String { title }
 }
 
+enum PlanSavedPlaceSupport {
+    static func normalizedActivityName(_ activity: String) -> String {
+        let collapsedWhitespace = activity
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { $0.isEmpty == false }
+            .joined(separator: " ")
+
+        return collapsedWhitespace.folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: .current
+        )
+    }
+
+    static func resolvedActivityName(
+        for activity: String,
+        resolveSavedPlace: (String) -> ResolvedItineraryPlace
+    ) -> String {
+        let resolvedName = resolveSavedPlace(activity).name
+        let normalizedResolvedName = normalizedActivityName(resolvedName)
+
+        if normalizedResolvedName.isEmpty == false {
+            return normalizedResolvedName
+        }
+
+        return normalizedActivityName(activity)
+    }
+
+    static func savedPlaceNamesForRequest(
+        from savedPlaces: [SavedPlace],
+        limit: Int = 25
+    ) -> [String] {
+        guard limit > 0 else { return [] }
+
+        var seenNames: Set<String> = []
+        var orderedNames: [String] = []
+
+        for place in savedPlaces.sorted(by: { $0.createdAt > $1.createdAt }) {
+            let normalizedName = normalizedActivityName(place.name)
+            guard normalizedName.isEmpty == false else { continue }
+            guard seenNames.insert(normalizedName).inserted else { continue }
+
+            orderedNames.append(place.name.trimmingCharacters(in: .whitespacesAndNewlines))
+            if orderedNames.count == limit {
+                break
+            }
+        }
+
+        return orderedNames
+    }
+}
+
+private struct PlanPersistenceCoordinator {
+    let modelContext: ModelContext
+    let destinationName: String
+    let normalizeActivityName: (String) -> String
+    let resolveSavedPlace: (String) -> ResolvedItineraryPlace
+
+    func loadSavedActivityNames() throws -> Set<String> {
+        let destination = destinationName
+        let descriptor = FetchDescriptor<SavedPlace>(
+            predicate: #Predicate<SavedPlace> { place in
+                place.destinationName == destination
+            }
+        )
+        let savedPlaces = try modelContext.fetch(descriptor)
+        return Set(savedPlaces.map(\.name).map(normalizeActivityName))
+    }
+
+    @discardableResult
+    func saveActivityIfNeeded(_ activity: String) throws -> String? {
+        let normalizedActivity = resolvedActivityName(for: activity)
+        guard normalizedActivity.isEmpty == false else {
+            return nil
+        }
+
+        let existingPlaces = try fetchSavedPlacesForDestination()
+        _ = try persistResolvedPlaceIfNeeded(for: activity, existingPlaces: existingPlaces)
+        return normalizedActivity
+    }
+
+    func saveAllActivitiesIfNeeded(_ activities: [String]) throws -> Set<String> {
+        guard activities.isEmpty == false else {
+            return []
+        }
+
+        var existingPlaces = try fetchSavedPlacesForDestination()
+        var savedNames: Set<String> = []
+
+        for activity in activities {
+            let normalizedActivity = resolvedActivityName(for: activity)
+            guard normalizedActivity.isEmpty == false else { continue }
+
+            if let savedPlace = try persistResolvedPlaceIfNeeded(for: activity, existingPlaces: existingPlaces) {
+                existingPlaces.append(savedPlace)
+            }
+
+            savedNames.insert(normalizedActivity)
+        }
+
+        return savedNames
+    }
+
+    func savedPlaceNamesForRequest() throws -> [String] {
+        PlanSavedPlaceSupport.savedPlaceNamesForRequest(
+            from: try fetchSavedPlacesForDestination()
+        )
+    }
+
+    func saveCurrentItinerary(
+        itinerary: PlanAPIService.ItineraryResponse,
+        prompt: String,
+        selectedPreferences: Set<PlanPreference>
+    ) throws -> SavedItinerary {
+        let savedItinerary = SavedItinerary(
+            destinationName: destinationName,
+            prompt: prompt,
+            preferencesCSV: SavedItinerary.encodeCSV(selectedPreferences.map(\.rawValue).sorted()),
+            morningTitle: itinerary.morning.title,
+            morningActivitiesCSV: SavedItinerary.encodeCSV(itinerary.morning.activities),
+            afternoonTitle: itinerary.afternoon.title,
+            afternoonActivitiesCSV: SavedItinerary.encodeCSV(itinerary.afternoon.activities),
+            eveningTitle: itinerary.evening.title,
+            eveningActivitiesCSV: SavedItinerary.encodeCSV(itinerary.evening.activities),
+            notesCSV: SavedItinerary.encodeCSV(itinerary.notes)
+        )
+
+        modelContext.insert(savedItinerary)
+        try modelContext.save()
+        return savedItinerary
+    }
+
+    func deleteSavedItinerary(_ savedItinerary: SavedItinerary) throws -> String {
+        let deletedSignature = signature(for: savedItinerary)
+        modelContext.delete(savedItinerary)
+        try modelContext.save()
+        return deletedSignature
+    }
+
+    func signature(for savedItinerary: SavedItinerary) -> String {
+        [
+            savedItinerary.destinationName,
+            savedItinerary.prompt.trimmingCharacters(in: .whitespacesAndNewlines),
+            savedItinerary.preferences.sorted().joined(separator: "|"),
+            savedItinerary.morningTitle,
+            savedItinerary.morningActivities.joined(separator: "|"),
+            savedItinerary.afternoonTitle,
+            savedItinerary.afternoonActivities.joined(separator: "|"),
+            savedItinerary.eveningTitle,
+            savedItinerary.eveningActivities.joined(separator: "|"),
+            savedItinerary.notes.joined(separator: "|")
+        ]
+        .joined(separator: "||")
+    }
+
+    private func fetchSavedPlacesForDestination() throws -> [SavedPlace] {
+        let destination = destinationName
+        let descriptor = FetchDescriptor<SavedPlace>(
+            predicate: #Predicate<SavedPlace> { place in
+                place.destinationName == destination
+            }
+        )
+        return try modelContext.fetch(descriptor)
+    }
+
+    @discardableResult
+    private func persistResolvedPlaceIfNeeded(
+        for activity: String,
+        existingPlaces: [SavedPlace]
+    ) throws -> SavedPlace? {
+        let normalizedActivity = normalizeActivityName(activity)
+        guard normalizedActivity.isEmpty == false else {
+            return nil
+        }
+
+        let resolvedPlace = resolveSavedPlace(activity)
+        let normalizedResolvedName = normalizeActivityName(resolvedPlace.name)
+
+        guard existingPlaces.contains(where: { existingPlace in
+            normalizeActivityName(existingPlace.name) == normalizedResolvedName
+        }) == false else {
+            return nil
+        }
+
+        let savedPlace = SavedPlace(
+            name: resolvedPlace.name,
+            category: resolvedPlace.category,
+            source: SavedPlace.Source.itinerary.rawValue,
+            destinationName: destinationName,
+            latitude: resolvedPlace.latitude,
+            longitude: resolvedPlace.longitude
+        )
+        modelContext.insert(savedPlace)
+        try modelContext.save()
+        return savedPlace
+    }
+
+    private func resolvedActivityName(for activity: String) -> String {
+        PlanSavedPlaceSupport.resolvedActivityName(
+            for: activity,
+            resolveSavedPlace: resolveSavedPlace
+        )
+    }
+}
+
 struct PlanHomeView: View {
     let destinationName: String
 
@@ -79,6 +283,15 @@ struct PlanHomeView: View {
         )
     }
 
+    private var persistenceCoordinator: PlanPersistenceCoordinator {
+        PlanPersistenceCoordinator(
+            modelContext: modelContext,
+            destinationName: destinationName,
+            normalizeActivityName: normalizedActivityName,
+            resolveSavedPlace: resolvedSavedPlace
+        )
+    }
+
     private var trimmedPrompt: String {
         prompt.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -99,7 +312,20 @@ struct PlanHomeView: View {
     private var allItineraryActivities: [String] {
         var uniqueActivities: [String] = []
 
-        for activity in itinerarySections.flatMap(\.activities).map(normalizedActivityName) {
+        for activity in itinerarySections.flatMap(\.activities) {
+            guard activity.isEmpty == false, uniqueActivities.contains(activity) == false else {
+                continue
+            }
+            uniqueActivities.append(activity)
+        }
+
+        return uniqueActivities
+    }
+
+    private var allItineraryActivityIdentifiers: [String] {
+        var uniqueActivities: [String] = []
+
+        for activity in allItineraryActivities.map(savedActivityIdentifier) {
             guard activity.isEmpty == false, uniqueActivities.contains(activity) == false else {
                 continue
             }
@@ -110,8 +336,8 @@ struct PlanHomeView: View {
     }
 
     private var isEntireItinerarySaved: Bool {
-        allItineraryActivities.isEmpty == false
-        && allItineraryActivities.allSatisfy { savedActivityNames.contains($0) }
+        allItineraryActivityIdentifiers.isEmpty == false
+        && allItineraryActivityIdentifiers.allSatisfy { savedActivityNames.contains($0) }
     }
 
     private var currentItinerarySignature: String? {
@@ -629,7 +855,7 @@ struct PlanHomeView: View {
     }
 
     private func saveActivityButton(for activity: String) -> some View {
-        let isSaved = savedActivityNames.contains(normalizedActivityName(activity))
+        let isSaved = savedActivityNames.contains(savedActivityIdentifier(activity))
 
         return Button {
             saveActivity(activity)
@@ -656,58 +882,25 @@ struct PlanHomeView: View {
 
     @MainActor
     private func loadSavedActivities() async {
-        let destination = destinationName
-
         do {
-            let descriptor = FetchDescriptor<SavedPlace>(
-                predicate: #Predicate<SavedPlace> { place in
-                    place.destinationName == destination
-                }
-            )
-            let savedPlaces = try modelContext.fetch(descriptor)
-            savedActivityNames = Set(savedPlaces.map(\.name).map(normalizedActivityName))
+            savedActivityNames = try persistenceCoordinator.loadSavedActivityNames()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
     private func saveActivity(_ activity: String) {
-        let trimmedActivity = normalizedActivityName(activity)
-        let resolvedPlace = resolvedSavedPlace(for: trimmedActivity)
+        let trimmedActivity = savedActivityIdentifier(activity)
 
         guard savedActivityNames.contains(trimmedActivity) == false else {
             return
         }
 
         do {
-            let destination = destinationName
-            let resolvedName = normalizedActivityName(resolvedPlace.name)
-            let descriptor = FetchDescriptor<SavedPlace>(
-                predicate: #Predicate<SavedPlace> { place in
-                    place.name == resolvedName && place.destinationName == destination
-                }
-            )
-
-            let existingPlace = try modelContext.fetch(descriptor).first
-            guard existingPlace == nil else {
+            if let savedName = try persistenceCoordinator.saveActivityIfNeeded(activity) {
                 withAnimation(.easeInOut(duration: 0.2)) {
-                    _ = savedActivityNames.insert(trimmedActivity)
+                    _ = savedActivityNames.insert(savedName)
                 }
-                return
-            }
-
-            try SavedPlaceService.savePlace(
-                name: resolvedPlace.name,
-                category: resolvedPlace.category,
-                source: SavedPlace.Source.itinerary.rawValue,
-                destinationName: destinationName,
-                latitude: resolvedPlace.latitude,
-                longitude: resolvedPlace.longitude,
-                in: modelContext
-            )
-
-            withAnimation(.easeInOut(duration: 0.2)) {
-                _ = savedActivityNames.insert(trimmedActivity)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -722,38 +915,10 @@ struct PlanHomeView: View {
         }
 
         do {
-            let destination = destinationName
-            let descriptor = FetchDescriptor<SavedPlace>(
-                predicate: #Predicate<SavedPlace> { place in
-                    place.destinationName == destination
-                }
-            )
-
-            let existingPlaces = try modelContext.fetch(descriptor)
-            var knownSavedNames = Set(existingPlaces.map(\.name).map(normalizedActivityName))
-
-            for activity in activitiesToSave {
-                let resolvedPlace = resolvedSavedPlace(for: activity)
-                let resolvedName = normalizedActivityName(resolvedPlace.name)
-
-                guard knownSavedNames.contains(resolvedName) == false else {
-                    continue
-                }
-
-                try SavedPlaceService.savePlace(
-                    name: resolvedPlace.name,
-                    category: resolvedPlace.category,
-                    source: SavedPlace.Source.itinerary.rawValue,
-                    destinationName: destinationName,
-                    latitude: resolvedPlace.latitude,
-                    longitude: resolvedPlace.longitude,
-                    in: modelContext
-                )
-                knownSavedNames.insert(resolvedName)
-            }
+            let savedNames = try persistenceCoordinator.saveAllActivitiesIfNeeded(activitiesToSave)
 
             withAnimation(.easeInOut(duration: 0.2)) {
-                savedActivityNames.formUnion(activitiesToSave)
+                savedActivityNames.formUnion(savedNames)
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -761,29 +926,26 @@ struct PlanHomeView: View {
     }
 
     private func normalizedActivityName(_ activity: String) -> String {
-        activity.trimmingCharacters(in: .whitespacesAndNewlines)
+        PlanSavedPlaceSupport.normalizedActivityName(activity)
+    }
+
+    private func savedActivityIdentifier(_ activity: String) -> String {
+        PlanSavedPlaceSupport.resolvedActivityName(
+            for: activity,
+            resolveSavedPlace: resolvedSavedPlace
+        )
     }
 
     private func saveCurrentItinerary() {
         guard let itinerary else { return }
 
         do {
-            let savedItinerary = SavedItinerary(
-                destinationName: destinationName,
+            let savedItinerary = try persistenceCoordinator.saveCurrentItinerary(
+                itinerary: itinerary,
                 prompt: trimmedPrompt,
-                preferencesCSV: SavedItinerary.encodeCSV(selectedPreferences.map(\.rawValue).sorted()),
-                morningTitle: itinerary.morning.title,
-                morningActivitiesCSV: SavedItinerary.encodeCSV(itinerary.morning.activities),
-                afternoonTitle: itinerary.afternoon.title,
-                afternoonActivitiesCSV: SavedItinerary.encodeCSV(itinerary.afternoon.activities),
-                eveningTitle: itinerary.evening.title,
-                eveningActivitiesCSV: SavedItinerary.encodeCSV(itinerary.evening.activities),
-                notesCSV: SavedItinerary.encodeCSV(itinerary.notes)
+                selectedPreferences: selectedPreferences
             )
-
-            modelContext.insert(savedItinerary)
-            try modelContext.save()
-            persistedItinerarySignature = signature(for: savedItinerary)
+            persistedItinerarySignature = persistenceCoordinator.signature(for: savedItinerary)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -806,9 +968,7 @@ struct PlanHomeView: View {
 
     private func deleteSavedItinerary(_ savedItinerary: SavedItinerary) {
         do {
-            let deletedSignature = signature(for: savedItinerary)
-            modelContext.delete(savedItinerary)
-            try modelContext.save()
+            let deletedSignature = try persistenceCoordinator.deleteSavedItinerary(savedItinerary)
 
             if persistedItinerarySignature == deletedSignature {
                 persistedItinerarySignature = nil
@@ -819,19 +979,7 @@ struct PlanHomeView: View {
     }
 
     private func signature(for savedItinerary: SavedItinerary) -> String {
-        [
-            savedItinerary.destinationName,
-            savedItinerary.prompt.trimmingCharacters(in: .whitespacesAndNewlines),
-            savedItinerary.preferences.sorted().joined(separator: "|"),
-            savedItinerary.morningTitle,
-            savedItinerary.morningActivities.joined(separator: "|"),
-            savedItinerary.afternoonTitle,
-            savedItinerary.afternoonActivities.joined(separator: "|"),
-            savedItinerary.eveningTitle,
-            savedItinerary.eveningActivities.joined(separator: "|"),
-            savedItinerary.notes.joined(separator: "|")
-        ]
-        .joined(separator: "||")
+        persistenceCoordinator.signature(for: savedItinerary)
     }
 
     private func savedItineraryPromptPreview(for savedItinerary: SavedItinerary) -> String {
@@ -853,7 +1001,9 @@ struct PlanHomeView: View {
 
     private func resolvedSavedPlace(for activity: String) -> ResolvedItineraryPlace {
         if let poi = ItineraryPlaceMatcher.match(destinationName: destinationName, activityText: activity) {
+            #if DEBUG
             print("ItineraryPlaceMatcher matched '\(activity)' to '\(poi.name)' in \(destinationName)")
+            #endif
             return ResolvedItineraryPlace(
                 name: poi.name,
                 category: poi.category,
@@ -862,7 +1012,9 @@ struct PlanHomeView: View {
             )
         }
 
+        #if DEBUG
         print("ItineraryPlaceMatcher used fallback for '\(activity)' in \(destinationName)")
+        #endif
         return ResolvedItineraryPlace(
             name: activity,
             category: ItineraryCategoryInference.inferCategory(from: activity),
@@ -883,7 +1035,10 @@ struct PlanHomeView: View {
 
     @MainActor
     private func requestItinerary(resetPersistedSignature: Bool) async {
+        guard isLoading == false else { return }
+
         isLoading = true
+        defer { isLoading = false }
         errorMessage = nil
 
         if resetPersistedSignature {
@@ -891,13 +1046,14 @@ struct PlanHomeView: View {
         }
 
         do {
+            let savedPlaces = try persistenceCoordinator.savedPlaceNamesForRequest()
             let nextItinerary = try await planAPIService.generateItinerary(
                 destination: destinationName,
                 prompt: trimmedPrompt,
                 preferences: selectedPreferences
                     .sorted { $0.title < $1.title }
                     .map(\.title),
-                savedPlaces: []
+                savedPlaces: savedPlaces
             )
 
             withAnimation(.easeInOut(duration: 0.25)) {
@@ -907,15 +1063,19 @@ struct PlanHomeView: View {
         } catch {
             errorMessage = userFacingPlannerErrorMessage(for: error)
         }
-
-        isLoading = false
     }
 
     private func userFacingPlannerErrorMessage(for error: Error) -> String {
         if let serviceError = error as? PlanAPIService.ServiceError {
             switch serviceError {
-            case .backendUnavailable:
+            case .transportError:
                 return "Itinerary generation is unavailable right now because CityScout cannot reach the planner backend. Please try again shortly once a reachable backend host is available."
+            case .rateLimited:
+                return "Itinerary generation is busy right now. Please try again in a moment."
+            case .unauthorized, .forbidden:
+                return "Itinerary generation is unavailable because the planner backend configuration is not accepted right now."
+            case .emptyResponse, .decodingFailed, .invalidResponse:
+                return "Itinerary generation is unavailable because CityScout received an unexpected planner response."
             default:
                 return serviceError.localizedDescription
             }
@@ -925,7 +1085,7 @@ struct PlanHomeView: View {
     }
 }
 
-private struct ResolvedItineraryPlace {
+struct ResolvedItineraryPlace {
     let name: String
     let category: POICategory?
     let latitude: Double

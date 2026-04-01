@@ -3,6 +3,58 @@ import SwiftData
 @testable import CityScout
 
 final class CityScoutTests: XCTestCase {
+    func testResolvedActivityNameUsesMatchedPOIName() {
+        let resolvedName = PlanSavedPlaceSupport.resolvedActivityName(
+            for: "Coffee near the Louvre",
+            resolveSavedPlace: { _ in
+                ResolvedItineraryPlace(
+                    name: "Louvre Museum",
+                    category: .sights,
+                    latitude: 48.8606,
+                    longitude: 2.3376
+                )
+            }
+        )
+
+        XCTAssertEqual(resolvedName, "louvre museum")
+    }
+
+    func testSavedPlaceNamesForRequestDeduplicatesAndKeepsNewestFirst() {
+        let olderPlace = SavedPlace(
+            name: "Louvre Museum",
+            category: .sights,
+            source: SavedPlace.Source.itinerary.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8606,
+            longitude: 2.3376,
+            createdAt: Date(timeIntervalSince1970: 100)
+        )
+        let newerDuplicate = SavedPlace(
+            name: "  Louvre   Museum  ",
+            category: .sights,
+            source: SavedPlace.Source.manual.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8606,
+            longitude: 2.3376,
+            createdAt: Date(timeIntervalSince1970: 200)
+        )
+        let newestUnique = SavedPlace(
+            name: "Cafe de Flore",
+            category: .cafes,
+            source: SavedPlace.Source.manual.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8546,
+            longitude: 2.3339,
+            createdAt: Date(timeIntervalSince1970: 300)
+        )
+
+        let requestNames = PlanSavedPlaceSupport.savedPlaceNamesForRequest(
+            from: [olderPlace, newestUnique, newerDuplicate]
+        )
+
+        XCTAssertEqual(requestNames, ["Cafe de Flore", "Louvre   Museum"])
+    }
+
     @MainActor
     func testSeedImportIsIdempotentForBarcelonaAndParis() throws {
         let container = try makeInMemoryContainer()
