@@ -46,7 +46,7 @@ docs/
 - `POST /plan-itinerary`
 - OpenAI usage stays in the backend
 - App secrets stay in backend/environment config, not in SwiftUI views
-- Current backend protection is a shared secret plus in-memory rate limiting for private testing
+- Current backend protection is deployment-side configuration plus in-memory rate limiting, pending stronger production auth controls
 
 ## Data Flow Summary
 - Seed JSON files in `Resources/SeedContent/` bootstrap destination data into SwiftData

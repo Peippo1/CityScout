@@ -108,9 +108,6 @@ struct PlanAPIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if environment.appSharedSecret.isEmpty == false {
-            request.setValue(environment.appSharedSecret, forHTTPHeaderField: "X-CityScout-App-Secret")
-        }
         request.timeoutInterval = 20
 
         do {

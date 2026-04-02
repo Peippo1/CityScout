@@ -2,7 +2,7 @@
 
 This backend is a lightweight FastAPI service for CityScout. It sits between the iOS app and OpenAI so API keys and orchestration logic stay on the server.
 
-It includes a simple shared-secret header check and in-memory rate limiting for private testing. This is not full user authentication.
+It currently uses in-memory rate limiting only. Production protection should come from deployment-side controls and proper authentication, not client-embedded secrets.
 
 ## Create a Virtual Environment
 
@@ -24,12 +24,11 @@ source .venv/bin/activate
 cp .env.example .env
 ```
 
-Update `.env` for local development and private testing.
+Update `.env` for local development.
 
 Required variables:
 - `APP_ENV` (development, test, staging, production)
 - `OPENAI_API_KEY`
-- `APP_SHARED_SECRET`
 
 Optional variables:
 - `APP_ALLOWED_ORIGIN` or `APP_ALLOWED_ORIGINS` (comma-separated) for staging/testing CORS
@@ -64,7 +63,6 @@ Plan itinerary:
 
 ```bash
 curl -X POST http://127.0.0.1:8000/plan-itinerary \
-  -H "X-CityScout-App-Secret: your_shared_secret" \
   -H "Content-Type: application/json" \
   -d '{
     "destination": "Paris",

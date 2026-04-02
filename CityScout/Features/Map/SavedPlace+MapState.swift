@@ -1,12 +1,16 @@
 import Foundation
 
 extension SavedPlace {
+    var hasUsableMapCoordinate: Bool {
+        latitude != 0 && longitude != 0
+    }
+
     var isMappedItineraryPlace: Bool {
-        isItineraryDerived && latitude != 0 && longitude != 0
+        isItineraryDerived && hasUsableMapCoordinate
     }
 
     var isUnmatchedItineraryPlace: Bool {
-        isItineraryDerived && latitude == 0 && longitude == 0
+        isItineraryDerived && hasUsableMapCoordinate == false
     }
 
     var itineraryStatusText: String? {

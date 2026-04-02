@@ -5,10 +5,10 @@
 - `127.0.0.1` works for simulator-on-Mac workflows but not for physical devices
 - A device-safe backend configuration path is still needed before broader testing
 
-## Shared Secret / Private Testing Setup
-- The app currently uses a shared-secret header for backend access
-- This is enough for private testing but is not full account-based authentication
-- Misconfigured secrets currently surface as service failures rather than a richer auth flow
+## Backend Access Controls
+- The planner endpoint no longer relies on a client-embedded shared secret
+- Production protection should come from deployment-side controls such as authenticated gateways, origin policy, network controls, and proper user/session auth
+- Rate limiting is still in-memory and should be upgraded before broader production traffic
 
 ## Itinerary Matching Limits
 - `ItineraryPlaceMatcher` is conservative by design

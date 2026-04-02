@@ -6,7 +6,6 @@ enum AppEnvironment {
 
     struct PlannerConfiguration: Equatable {
         let baseURLString: String
-        let appSharedSecret: String
         let baseURLSource: String
     }
 
@@ -22,7 +21,6 @@ enum AppEnvironment {
         static let apiBaseURL = "CITYSCOUT_API_BASE_URL"
         static let simulatorAPIBaseURL = "CITYSCOUT_SIMULATOR_API_BASE_URL"
         static let deviceAPIBaseURL = "CITYSCOUT_DEVICE_API_BASE_URL"
-        static let appSharedSecret = "CITYSCOUT_APP_SHARED_SECRET"
     }
 
     var plannerConfiguration: PlannerConfiguration {
@@ -38,16 +36,11 @@ enum AppEnvironment {
         plannerConfiguration.baseURLString
     }
 
-    var appSharedSecret: String {
-        plannerConfiguration.appSharedSecret
-    }
-
     #if DEBUG
     var debugPlannerSummary: String {
         let configuration = plannerConfiguration
         let displayURL = configuration.baseURLString.isEmpty ? "unconfigured" : configuration.baseURLString
-        let secretStatus = configuration.appSharedSecret.isEmpty ? "secret missing" : "secret configured"
-        return "\(displayURL) (\(configuration.baseURLSource), \(secretStatus))"
+        return "\(displayURL) (\(configuration.baseURLSource))"
     }
     #endif
 
@@ -85,15 +78,8 @@ enum AppEnvironment {
             baseURLSource = fallbackBaseURL.isEmpty ? "unconfigured" : "simulator fallback"
         }
 
-        let appSharedSecret = resolvedValue(
-            key: Key.appSharedSecret,
-            infoDictionary: infoDictionary,
-            environment: environment
-        ) ?? ""
-
         return PlannerConfiguration(
             baseURLString: resolvedBaseURL,
-            appSharedSecret: appSharedSecret,
             baseURLSource: baseURLSource
         )
     }
@@ -136,7 +122,4 @@ enum AppEnvironment {
 
         return nil
     }
-
-    // NOTE: This app must not ship with embedded secrets. If private backend access is still required,
-    // configure it outside the committed codebase and treat that as a temporary bridge, not production auth.
 }

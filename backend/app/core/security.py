@@ -1,13 +1,10 @@
 import logging
-import secrets
 import time
 from collections import deque
 from threading import Lock
 
-from fastapi import Header, HTTPException, Request
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_429_TOO_MANY_REQUESTS, HTTP_500_INTERNAL_SERVER_ERROR
-
-from app.core.config import settings
+from fastapi import HTTPException, Request
+from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 
 
 logger = logging.getLogger(__name__)
@@ -44,20 +41,6 @@ def _client_ip(request: Request) -> str:
 
 
 rate_limiter = InMemoryRateLimiter(max_requests=20, window_seconds=600)
-
-
-def enforce_app_secret(
-    x_cityscout_app_secret: str | None = Header(None, alias="X-CityScout-App-Secret"),
-) -> None:
-    try:
-        expected = settings.require_app_shared_secret()
-    except RuntimeError as error:
-        logger.error("Configuration error category=missing_shared_secret")
-        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
-
-    if not x_cityscout_app_secret or not secrets.compare_digest(x_cityscout_app_secret, expected):
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-
 
 def enforce_rate_limit(request: Request) -> None:
     client_ip = _client_ip(request)
