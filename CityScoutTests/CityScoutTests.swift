@@ -3,6 +3,20 @@ import SwiftData
 @testable import CityScout
 
 final class CityScoutTests: XCTestCase {
+    func testOrderedUniqueActivityNamesPreservesFirstTrimmedValue() {
+        let activities = [
+            "  Louvre Museum  ",
+            "Cafe de Flore",
+            "louvre   museum",
+            "  ",
+            "Cafe   de   Flore"
+        ]
+
+        let uniqueActivities = PlanSavedPlaceSupport.orderedUniqueActivityNames(from: activities)
+
+        XCTAssertEqual(uniqueActivities, ["Louvre Museum", "Cafe de Flore"])
+    }
+
     func testResolvedActivityNameUsesMatchedPOIName() {
         let resolvedName = PlanSavedPlaceSupport.resolvedActivityName(
             for: "Coffee near the Louvre",
