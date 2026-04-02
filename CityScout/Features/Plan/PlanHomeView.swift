@@ -44,6 +44,13 @@ enum PlanPreference: String, CaseIterable, Identifiable {
 
 private struct PlanSection: Identifiable {
     let title: String
+    let activities: [PlannedActivity]
+
+    var id: String { title }
+}
+
+private struct SavedItineraryDetailSection: Identifiable {
+    let title: String
     let activities: [String]
 
     var id: String { title }
@@ -85,22 +92,18 @@ private enum PlanActivitySaveStatus {
             return .orange
         }
     }
+
+    init(mappingStatus: MappingStatus) {
+        switch mappingStatus {
+        case .matchedPOI:
+            self = .mapped
+        case .fallback:
+            self = .fallback
+        }
+    }
 }
 
 enum PlanSavedPlaceSupport {
-    private enum DaySection {
-        case morning
-        case afternoon
-        case evening
-    }
-
-    private struct ResolvedActivityCandidate {
-        let name: String
-        let category: POICategory?
-        let latitude: Double
-        let longitude: Double
-    }
-
     static func normalizedActivityName(_ activity: String) -> String {
         let collapsedWhitespace = activity
             .components(separatedBy: .whitespacesAndNewlines)
@@ -187,265 +190,6 @@ enum PlanSavedPlaceSupport {
         ]
         .joined(separator: "||")
     }
-
-    static func buildItineraryFromSavedPlaces(
-        destinationName: String,
-        savedPlaces: [SavedPlace]
-    ) -> PlanAPIService.ItineraryResponse? {
-        let uniquePlaces = orderedUniqueSavedPlaces(
-            from: savedPlaces.filter { $0.destinationName == destinationName }
-        )
-        guard uniquePlaces.isEmpty == false else { return nil }
-
-        var remainingPlaces = uniquePlaces
-        let morningActivities = takeActivities(
-            from: &remainingPlaces,
-            preferredCategories: [.cafes, .sights],
-            limit: sectionLimit(for: uniquePlaces.count, section: .morning)
-        )
-        let eveningActivities = takeActivities(
-            from: &remainingPlaces,
-            preferredCategories: [.food, .nightlife, .shopping],
-            limit: sectionLimit(for: uniquePlaces.count, section: .evening)
-        )
-        let afternoonActivities = takeActivities(
-            from: &remainingPlaces,
-            preferredCategories: [.sights, .shopping, .cafes],
-            limit: sectionLimit(for: uniquePlaces.count, section: .afternoon)
-        )
-
-        let notes = buildFromSavedPlacesNotes(
-            totalPlaceCount: uniquePlaces.count,
-            representedSections: [
-                morningActivities.isEmpty == false,
-                afternoonActivities.isEmpty == false,
-                eveningActivities.isEmpty == false
-            ]
-        )
-
-        return PlanAPIService.ItineraryResponse(
-            destination: destinationName,
-            morning: .init(title: "Morning", activities: morningActivities),
-            afternoon: .init(title: "Afternoon", activities: afternoonActivities),
-            evening: .init(title: "Evening", activities: eveningActivities),
-            notes: notes
-        )
-    }
-
-    static func optimizeItinerary(
-        _ itinerary: PlanAPIService.ItineraryResponse,
-        destinationName: String,
-        resolveSavedPlace: (String) -> ResolvedItineraryPlace
-    ) -> PlanAPIService.ItineraryResponse {
-        let allActivities = orderedUniqueActivityNames(
-            from: itinerary.morning.activities
-                + itinerary.afternoon.activities
-                + itinerary.evening.activities
-        )
-
-        let morningTarget = itinerary.morning.activities.count
-        let afternoonTarget = itinerary.afternoon.activities.count
-        let eveningTarget = itinerary.evening.activities.count
-
-        var remainingActivities = allActivities.map { activity in
-            let resolvedPlace = resolveSavedPlace(activity)
-            return ResolvedActivityCandidate(
-                name: activity,
-                category: resolvedPlace.category,
-                latitude: resolvedPlace.latitude,
-                longitude: resolvedPlace.longitude
-            )
-        }
-
-        let morningActivities = takeOptimizedActivities(
-            from: &remainingActivities,
-            preferredCategories: [.cafes, .sights],
-            limit: morningTarget
-        )
-        let eveningActivities = takeOptimizedActivities(
-            from: &remainingActivities,
-            preferredCategories: [.food, .nightlife, .shopping],
-            limit: eveningTarget
-        )
-        let afternoonActivities = takeOptimizedActivities(
-            from: &remainingActivities,
-            preferredCategories: [.sights, .shopping, .cafes],
-            limit: afternoonTarget
-        )
-
-        return PlanAPIService.ItineraryResponse(
-            destination: destinationName,
-            morning: .init(title: itinerary.morning.title, activities: morningActivities),
-            afternoon: .init(title: itinerary.afternoon.title, activities: afternoonActivities),
-            evening: .init(title: itinerary.evening.title, activities: eveningActivities),
-            notes: optimizedNotes(
-                existingNotes: itinerary.notes,
-                destinationName: destinationName,
-                changedOrder: morningActivities != itinerary.morning.activities
-                    || afternoonActivities != itinerary.afternoon.activities
-                    || eveningActivities != itinerary.evening.activities
-            )
-        )
-    }
-
-    private static func orderedUniqueSavedPlaces(from savedPlaces: [SavedPlace]) -> [SavedPlace] {
-        var seenNames: Set<String> = []
-        var orderedPlaces: [SavedPlace] = []
-
-        for place in savedPlaces.sorted(by: { $0.createdAt > $1.createdAt }) {
-            let normalizedName = normalizedActivityName(place.name)
-            guard normalizedName.isEmpty == false else { continue }
-            guard seenNames.insert(normalizedName).inserted else { continue }
-            orderedPlaces.append(place)
-        }
-
-        return orderedPlaces
-    }
-
-    private static func sectionLimit(for totalPlaceCount: Int, section: DaySection) -> Int {
-        switch totalPlaceCount {
-        case 0:
-            return 0
-        case 1:
-            return section == .morning ? 1 : 0
-        case 2:
-            return section == .afternoon ? 0 : 1
-        case 3:
-            return 1
-        case 4:
-            return section == .afternoon ? 2 : 1
-        default:
-            return 2
-        }
-    }
-
-    private static func takeActivities(
-        from places: inout [SavedPlace],
-        preferredCategories: [POICategory],
-        limit: Int
-    ) -> [String] {
-        guard limit > 0, places.isEmpty == false else { return [] }
-
-        var selectedNames: [String] = []
-        let preferredSet = Set(preferredCategories)
-        var matchedIndices: [Int] = []
-
-        for index in places.indices where matchedIndices.count < limit {
-            let place = places[index]
-            guard let category = place.category, preferredSet.contains(category) else { continue }
-            matchedIndices.append(index)
-            selectedNames.append(place.name)
-        }
-
-        for index in matchedIndices.reversed() {
-            places.remove(at: index)
-        }
-
-        while selectedNames.count < limit, places.isEmpty == false {
-            selectedNames.append(places.removeFirst().name)
-        }
-
-        return selectedNames
-    }
-
-    private static func takeOptimizedActivities(
-        from activities: inout [ResolvedActivityCandidate],
-        preferredCategories: [POICategory],
-        limit: Int
-    ) -> [String] {
-        guard limit > 0, activities.isEmpty == false else { return [] }
-
-        let preferredSet = Set(preferredCategories)
-        var selectedActivities: [ResolvedActivityCandidate] = []
-        var matchedIndices: [Int] = []
-
-        for index in activities.indices where matchedIndices.count < limit {
-            guard let category = activities[index].category, preferredSet.contains(category) else { continue }
-            matchedIndices.append(index)
-            selectedActivities.append(activities[index])
-        }
-
-        for index in matchedIndices.reversed() {
-            activities.remove(at: index)
-        }
-
-        while selectedActivities.count < limit, activities.isEmpty == false {
-            selectedActivities.append(activities.removeFirst())
-        }
-
-        return orderedActivitiesByProximity(selectedActivities).map(\.name)
-    }
-
-    private static func orderedActivitiesByProximity(
-        _ activities: [ResolvedActivityCandidate]
-    ) -> [ResolvedActivityCandidate] {
-        guard activities.count > 1 else { return activities }
-
-        var mappedActivities = activities.filter { $0.latitude != 0 || $0.longitude != 0 }
-        let fallbackActivities = activities.filter { $0.latitude == 0 && $0.longitude == 0 }
-
-        guard mappedActivities.count > 1 else {
-            return mappedActivities + fallbackActivities
-        }
-
-        var orderedActivities: [ResolvedActivityCandidate] = [mappedActivities.removeFirst()]
-
-        while mappedActivities.isEmpty == false, let currentActivity = orderedActivities.last {
-            let nextIndex = mappedActivities.enumerated().min { lhs, rhs in
-                distance(from: currentActivity, to: lhs.element) < distance(from: currentActivity, to: rhs.element)
-            }?.offset
-
-            guard let nextIndex else { break }
-            orderedActivities.append(mappedActivities.remove(at: nextIndex))
-        }
-
-        return orderedActivities + fallbackActivities
-    }
-
-    private static func distance(
-        from lhs: ResolvedActivityCandidate,
-        to rhs: ResolvedActivityCandidate
-    ) -> Double {
-        let latitudeDelta = lhs.latitude - rhs.latitude
-        let longitudeDelta = lhs.longitude - rhs.longitude
-        return (latitudeDelta * latitudeDelta) + (longitudeDelta * longitudeDelta)
-    }
-
-    private static func buildFromSavedPlacesNotes(
-        totalPlaceCount: Int,
-        representedSections: [Bool]
-    ) -> [String] {
-        var notes = [
-            "Built locally from your saved places, so this day works even if the planner backend is unavailable.",
-            "Morning prioritises cafés and sights, afternoon leans toward sights and shopping, and evening favours food and nightlife."
-        ]
-
-        if representedSections.filter({ $0 }).count < 3 {
-            notes.append(
-                totalPlaceCount == 1
-                ? "Save a few more places to fill out the rest of your day."
-                : "Save more places to round out the quieter parts of the day."
-            )
-        }
-
-        return notes
-    }
-
-    private static func optimizedNotes(
-        existingNotes: [String],
-        destinationName: String,
-        changedOrder: Bool
-    ) -> [String] {
-        let note = changedOrder
-            ? "Optimised locally for a smoother \(destinationName) day by grouping similar stops and keeping nearby places together where possible."
-            : "Checked locally and your current day is already balanced for \(destinationName)."
-
-        if existingNotes.contains(note) {
-            return existingNotes
-        }
-
-        return [note] + existingNotes
-    }
 }
 
 struct PlanPersistenceCoordinator {
@@ -516,6 +260,10 @@ struct PlanPersistenceCoordinator {
         PlanSavedPlaceSupport.savedPlaceNamesForRequest(
             from: try fetchSavedPlacesForDestination()
         )
+    }
+
+    func savedPlacesForPlanning() throws -> [SavedPlace] {
+        try fetchSavedPlacesForDestination()
     }
 
     func saveCurrentItinerary(
@@ -665,6 +413,7 @@ private final class PlanHomeViewModel: ObservableObject {
     @Published var prompt = ""
     @Published var selectedPreferences: Set<PlanPreference> = []
     @Published var itinerary: PlanAPIService.ItineraryResponse?
+    @Published private(set) var plannedItinerary: LocalPlannedItinerary?
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var savedActivityNames: Set<String> = []
@@ -672,6 +421,7 @@ private final class PlanHomeViewModel: ObservableObject {
     @Published var feedbackMessage: PlanFeedbackMessage?
 
     private let planAPIService = PlanAPIService()
+    private let localPlanner = LocalPlanner()
     private var feedbackDismissTask: Task<Void, Never>?
 
     deinit {
@@ -687,17 +437,17 @@ private final class PlanHomeViewModel: ObservableObject {
     }
 
     var itinerarySections: [PlanSection] {
-        guard let itinerary else { return [] }
+        guard let plannedItinerary else { return [] }
         return [
-            PlanSection(title: itinerary.morning.title, activities: itinerary.morning.activities),
-            PlanSection(title: itinerary.afternoon.title, activities: itinerary.afternoon.activities),
-            PlanSection(title: itinerary.evening.title, activities: itinerary.evening.activities)
+            PlanSection(title: plannedItinerary.morning.title, activities: plannedItinerary.morning.items),
+            PlanSection(title: plannedItinerary.afternoon.title, activities: plannedItinerary.afternoon.items),
+            PlanSection(title: plannedItinerary.evening.title, activities: plannedItinerary.evening.items)
         ]
     }
 
     var allItineraryActivities: [String] {
         PlanSavedPlaceSupport.orderedUniqueActivityNames(
-            from: itinerarySections.flatMap(\.activities)
+            from: itinerarySections.flatMap(\.activities).map(\.title)
         )
     }
 
@@ -788,10 +538,15 @@ private final class PlanHomeViewModel: ObservableObject {
         destinationName: String,
         savedPlaces: [SavedPlace]
     ) {
-        guard let nextItinerary = PlanSavedPlaceSupport.buildItineraryFromSavedPlaces(
+        let context = PlanningContext(
             destinationName: destinationName,
-            savedPlaces: savedPlaces
-        ) else {
+            prompt: trimmedPrompt,
+            preferences: selectedPreferences.map(\.rawValue),
+            savedPlaces: savedPlaces,
+            mode: .buildFromSaved
+        )
+
+        guard let nextItinerary = localPlanner.buildFromSaved(context: context) else {
             errorMessage = "Save a few places first, then CityScout can build a local day plan for you."
             return
         }
@@ -801,47 +556,73 @@ private final class PlanHomeViewModel: ObservableObject {
         errorMessage = nil
         persistedItinerarySignature = nil
 
-        withAnimation(.easeInOut(duration: 0.25)) {
-            itinerary = nextItinerary
-        }
-
+        apply(plannedItinerary: nextItinerary)
         showFeedback("Built a local plan from saved places", symbol: "sparkles")
     }
 
     func optimizeItinerary(
         destinationName: String,
+        savedPlaces: [SavedPlace],
         resolveSavedPlace: (String) -> ResolvedItineraryPlace
     ) {
         guard let itinerary else { return }
 
-        let optimizedItinerary = PlanSavedPlaceSupport.optimizeItinerary(
-            itinerary,
+        let context = PlanningContext(
             destinationName: destinationName,
-            resolveSavedPlace: resolveSavedPlace
+            prompt: trimmedPrompt,
+            preferences: selectedPreferences.map(\.rawValue),
+            savedPlaces: savedPlaces,
+            existingItinerary: itinerary,
+            mode: .optimizeExisting
         )
+
+        guard let optimizedItinerary = localPlanner.optimizeExisting(
+            context: context,
+            resolveSavedPlace: resolveSavedPlace
+        ) else {
+            return
+        }
 
         persistedItinerarySignature = nil
         errorMessage = nil
 
-        withAnimation(.easeInOut(duration: 0.25)) {
-            self.itinerary = optimizedItinerary
-        }
+        apply(plannedItinerary: optimizedItinerary)
 
         showFeedback("Optimized your day locally", symbol: "arrow.triangle.branch")
     }
 
-    func loadSavedItinerary(_ savedItinerary: SavedItinerary, signature: String) {
+    func loadSavedItinerary(
+        _ savedItinerary: SavedItinerary,
+        signature: String,
+        savedPlaces: [SavedPlace],
+        resolveSavedPlace: (String) -> ResolvedItineraryPlace
+    ) {
         prompt = savedItinerary.prompt
         selectedPreferences = Set(
             savedItinerary.preferences.compactMap(PlanPreference.init(rawValue:))
         )
-        itinerary = PlanAPIService.ItineraryResponse(
+        let itinerary = PlanAPIService.ItineraryResponse(
             destination: savedItinerary.destinationName,
             morning: .init(title: savedItinerary.morningTitle, activities: savedItinerary.morningActivities),
             afternoon: .init(title: savedItinerary.afternoonTitle, activities: savedItinerary.afternoonActivities),
             evening: .init(title: savedItinerary.eveningTitle, activities: savedItinerary.eveningActivities),
             notes: savedItinerary.notes
         )
+        let context = PlanningContext(
+            destinationName: savedItinerary.destinationName,
+            prompt: savedItinerary.prompt,
+            preferences: savedItinerary.preferences,
+            savedPlaces: savedPlaces,
+            existingItinerary: itinerary,
+            mode: .optimizeExisting
+        )
+        let annotatedItinerary = localPlanner.annotateItinerary(
+            itinerary,
+            context: context,
+            source: .optimizedExisting,
+            resolveSavedPlace: resolveSavedPlace
+        )
+        apply(plannedItinerary: annotatedItinerary)
         persistedItinerarySignature = signature
         errorMessage = nil
         showFeedback("Loaded saved itinerary", symbol: "clock.arrow.trianglehead.counterclockwise.rotate.90")
@@ -927,7 +708,13 @@ private final class PlanHomeViewModel: ObservableObject {
         )
     }
 
-    func removeActivity(_ activity: String, fromSectionTitled sectionTitle: String) {
+    func removeActivity(
+        _ activity: String,
+        fromSectionTitled sectionTitle: String,
+        destinationName: String,
+        savedPlaces: [SavedPlace],
+        resolveSavedPlace: (String) -> ResolvedItineraryPlace
+    ) {
         guard var itinerary else { return }
 
         switch sectionTitle {
@@ -941,9 +728,21 @@ private final class PlanHomeViewModel: ObservableObject {
             return
         }
 
-        withAnimation(.easeInOut(duration: 0.2)) {
-            self.itinerary = itinerary
-        }
+        let context = PlanningContext(
+            destinationName: destinationName,
+            prompt: trimmedPrompt,
+            preferences: selectedPreferences.map(\.rawValue),
+            savedPlaces: savedPlaces,
+            existingItinerary: itinerary,
+            mode: .optimizeExisting
+        )
+        let annotatedItinerary = localPlanner.annotateItinerary(
+            itinerary,
+            context: context,
+            source: .optimizedExisting,
+            resolveSavedPlace: resolveSavedPlace
+        )
+        apply(plannedItinerary: annotatedItinerary)
 
         persistedItinerarySignature = nil
         showFeedback("Removed activity from plan", symbol: "trash.fill")
@@ -974,10 +773,21 @@ private final class PlanHomeViewModel: ObservableObject {
                     .map(\.title),
                 savedPlaces: savedPlaces
             )
-
-            withAnimation(.easeInOut(duration: 0.25)) {
-                itinerary = nextItinerary
-            }
+            let planningContext = PlanningContext(
+                destinationName: destinationName,
+                prompt: trimmedPrompt,
+                preferences: selectedPreferences.map(\.rawValue),
+                savedPlaces: try persistenceCoordinator.savedPlacesForPlanning(),
+                existingItinerary: nextItinerary,
+                mode: .aiGenerate
+            )
+            let annotatedItinerary = localPlanner.annotateItinerary(
+                nextItinerary,
+                context: planningContext,
+                source: .aiGenerated,
+                resolveSavedPlace: persistenceCoordinator.resolveSavedPlace
+            )
+            apply(plannedItinerary: annotatedItinerary)
             await loadSavedActivities(using: persistenceCoordinator)
             showFeedback("Plan ready", symbol: "sparkles")
         } catch {
@@ -1005,6 +815,13 @@ private final class PlanHomeViewModel: ObservableObject {
 
         withAnimation(.easeInOut(duration: 0.2)) {
             feedbackMessage = nil
+        }
+    }
+
+    private func apply(plannedItinerary: LocalPlannedItinerary) {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            self.plannedItinerary = plannedItinerary
+            itinerary = plannedItinerary.asServiceResponse
         }
     }
 
@@ -1129,11 +946,11 @@ private struct SavedItineraryDetailView: View {
     @State private var isShowingRenamePrompt = false
     @State private var editedTitle = ""
 
-    private var sections: [PlanSection] {
+    private var sections: [SavedItineraryDetailSection] {
         [
-            PlanSection(title: savedItinerary.morningTitle, activities: savedItinerary.morningActivities),
-            PlanSection(title: savedItinerary.afternoonTitle, activities: savedItinerary.afternoonActivities),
-            PlanSection(title: savedItinerary.eveningTitle, activities: savedItinerary.eveningActivities)
+            SavedItineraryDetailSection(title: savedItinerary.morningTitle, activities: savedItinerary.morningActivities),
+            SavedItineraryDetailSection(title: savedItinerary.afternoonTitle, activities: savedItinerary.afternoonActivities),
+            SavedItineraryDetailSection(title: savedItinerary.eveningTitle, activities: savedItinerary.eveningActivities)
         ]
     }
 
@@ -1334,7 +1151,10 @@ struct PlanHomeView: View {
     }
 
     private var itineraryFallbackActivityCount: Int {
-        viewModel.allItineraryActivities.filter { activitySaveStatus(for: $0) == .fallback }.count
+        viewModel.itinerarySections
+            .flatMap(\.activities)
+            .filter { $0.mappingStatus == .fallback }
+            .count
     }
 
     private var isCurrentItineraryPersisted: Bool {
@@ -1389,7 +1209,9 @@ struct PlanHomeView: View {
                     onLoad: {
                         viewModel.loadSavedItinerary(
                             savedItinerary,
-                            signature: signature(for: savedItinerary)
+                            signature: signature(for: savedItinerary),
+                            savedPlaces: savedPlaces,
+                            resolveSavedPlace: resolvedSavedPlace
                         )
                     },
                     onRename: { title in
@@ -1582,6 +1404,7 @@ struct PlanHomeView: View {
                     Button {
                         viewModel.optimizeItinerary(
                             destinationName: destinationName,
+                            savedPlaces: savedPlaces,
                             resolveSavedPlace: resolvedSavedPlace
                         )
                     } label: {
@@ -1728,6 +1551,15 @@ struct PlanHomeView: View {
             timelineOverview
                 .padding(.horizontal)
 
+            if let narrative = viewModel.plannedItinerary?.narrative,
+               narrative.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+                Text(narrative)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             VStack(spacing: 12) {
                 ForEach(viewModel.itinerarySections) { section in
                     VStack(alignment: .leading, spacing: 10) {
@@ -1735,8 +1567,8 @@ struct PlanHomeView: View {
                             .font(.headline)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        ForEach(section.activities, id: \.self) { activity in
-                            let saveStatus = activitySaveStatus(for: activity)
+                        ForEach(section.activities) { activity in
+                            let saveStatus = PlanActivitySaveStatus(mappingStatus: activity.mappingStatus)
 
                             HStack(alignment: .top, spacing: 10) {
                                 Image(systemName: "circle.fill")
@@ -1746,11 +1578,11 @@ struct PlanHomeView: View {
                                     .accessibilityHidden(true)
 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(activity)
+                                    Text(activity.title)
                                         .font(.body)
                                         .fixedSize(horizontal: false, vertical: true)
 
-                                    Label(saveStatus.text, systemImage: saveStatus.symbol)
+                                    Label(activityMetadataText(for: activity), systemImage: saveStatus.symbol)
                                         .font(.caption)
                                         .foregroundStyle(saveStatus.tint)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -1761,8 +1593,11 @@ struct PlanHomeView: View {
                                 Menu {
                                     Button(role: .destructive) {
                                         viewModel.removeActivity(
-                                            activity,
-                                            fromSectionTitled: section.title
+                                            activity.title,
+                                            fromSectionTitled: section.title,
+                                            destinationName: destinationName,
+                                            savedPlaces: savedPlaces,
+                                            resolveSavedPlace: resolvedSavedPlace
                                         )
                                     } label: {
                                         Label("Remove activity", systemImage: "trash")
@@ -1899,7 +1734,7 @@ struct PlanHomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 ForEach(Array(section.activities.enumerated()), id: \.offset) { index, activity in
-                    Text("\(index + 1). \(activity)")
+                    Text("\(index + 1). \(activity.title)")
                         .font(.body)
                         .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1966,7 +1801,9 @@ struct PlanHomeView: View {
             Button {
                 viewModel.loadSavedItinerary(
                     savedItinerary,
-                    signature: signature(for: savedItinerary)
+                    signature: signature(for: savedItinerary),
+                    savedPlaces: savedPlaces,
+                    resolveSavedPlace: resolvedSavedPlace
                 )
             } label: {
                 Image(systemName: "arrow.clockwise.circle")
@@ -1995,13 +1832,13 @@ struct PlanHomeView: View {
         }
     }
 
-    private func saveActivityButton(for activity: String, status: PlanActivitySaveStatus) -> some View {
-        let activityIdentifier = savedActivityIdentifier(activity)
+    private func saveActivityButton(for activity: PlannedActivity, status: PlanActivitySaveStatus) -> some View {
+        let activityIdentifier = savedActivityIdentifier(activity.title)
         let isSaved = viewModel.savedActivityNames.contains(activityIdentifier)
 
         return Button {
             viewModel.saveActivity(
-                activity,
+                activity.title,
                 activityIdentifier: activityIdentifier,
                 activityStatus: status,
                 using: persistenceCoordinator
@@ -2027,9 +1864,27 @@ struct PlanHomeView: View {
         .accessibilityValue(isSaved ? "Saved" : "Not saved")
     }
 
-    private func activitySaveStatus(for activity: String) -> PlanActivitySaveStatus {
-        let resolvedPlace = resolvedSavedPlace(for: activity)
-        return (resolvedPlace.latitude != 0 || resolvedPlace.longitude != 0) ? .mapped : .fallback
+    private func activityMetadataText(for activity: PlannedActivity) -> String {
+        let status = PlanActivitySaveStatus(mappingStatus: activity.mappingStatus)
+        let confidenceText: String
+
+        switch activity.confidence {
+        case .high:
+            confidenceText = "High confidence"
+        case .medium:
+            confidenceText = "Medium confidence"
+        case .low:
+            confidenceText = "Low confidence"
+        }
+
+        switch activity.source {
+        case .aiGenerated:
+            return "\(status.text) • \(confidenceText)"
+        case .builtFromSaved:
+            return "Built from saved places • \(confidenceText)"
+        case .optimizedExisting:
+            return "Optimized locally • \(confidenceText)"
+        }
     }
 
     private func normalizedActivityName(_ activity: String) -> String {
