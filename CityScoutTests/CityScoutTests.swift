@@ -233,6 +233,48 @@ final class CityScoutTests: XCTestCase {
     }
 
     @MainActor
+    func testSavedPlaceServiceAvoidsDuplicateSaveWithinDestination() throws {
+        let container = try makeInMemoryContainer()
+        let modelContext = ModelContext(container)
+
+        let firstSave = try SavedPlaceService.savePlaceIfNeeded(
+            name: "Cafe de Flore",
+            category: .cafes,
+            source: SavedPlace.Source.poi.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8546,
+            longitude: 2.3339,
+            in: modelContext
+        )
+        let duplicateSave = try SavedPlaceService.savePlaceIfNeeded(
+            name: "  cafe   de flore ",
+            category: .cafes,
+            source: SavedPlace.Source.poi.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8546,
+            longitude: 2.3339,
+            in: modelContext
+        )
+        let otherDestinationSave = try SavedPlaceService.savePlaceIfNeeded(
+            name: "Cafe de Flore",
+            category: .cafes,
+            source: SavedPlace.Source.poi.rawValue,
+            destinationName: "Rome",
+            latitude: 41.9028,
+            longitude: 12.4964,
+            in: modelContext
+        )
+
+        let savedPlaces = try fetchSavedPlaces(in: modelContext)
+
+        XCTAssertNotNil(firstSave)
+        XCTAssertNil(duplicateSave)
+        XCTAssertNotNil(otherDestinationSave)
+        XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Paris" }.count, 1)
+        XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Rome" }.count, 1)
+    }
+
+    @MainActor
     func testSeedImportIsIdempotentForBarcelonaAndParis() throws {
         let container = try makeInMemoryContainer()
         let modelContext = ModelContext(container)

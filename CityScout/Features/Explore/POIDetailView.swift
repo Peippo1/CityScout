@@ -3,12 +3,32 @@ import SwiftData
 
 struct POIDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query private var savedPlaces: [SavedPlace]
 
     let poi: PointOfInterest
     let destinationName: String
 
     @State private var isShowingSaveAlert = false
     @State private var saveAlertMessage = ""
+
+    init(poi: PointOfInterest, destinationName: String) {
+        self.poi = poi
+        self.destinationName = destinationName
+        _savedPlaces = Query(
+            filter: #Predicate { place in
+                place.destinationName == destinationName
+            },
+            sort: [SortDescriptor(\SavedPlace.createdAt, order: .reverse)]
+        )
+    }
+
+    private var isSaved: Bool {
+        SavedPlaceService.isPlaceSaved(
+            name: poi.name,
+            destinationName: destinationName,
+            in: savedPlaces
+        )
+    }
 
     var body: some View {
         ScrollView {
@@ -31,10 +51,14 @@ struct POIDetailView: View {
                 Button {
                     saveToMap()
                 } label: {
-                    Label("Save to Map", systemImage: "mappin.and.ellipse")
+                    Label(
+                        isSaved ? "Saved to Map" : "Save to Map",
+                        systemImage: isSaved ? "bookmark.fill" : "mappin.and.ellipse"
+                    )
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(isSaved)
                 .accessibilityLabel("Save \(poi.name) to map")
                 .accessibilityHint("Adds this point of interest to your saved places.")
             }
@@ -52,7 +76,7 @@ struct POIDetailView: View {
 
     private func saveToMap() {
         do {
-            try SavedPlaceService.savePlace(
+            let savedPlace = try SavedPlaceService.savePlaceIfNeeded(
                 name: poi.name,
                 category: poi.category,
                 source: SavedPlace.Source.poi.rawValue,
@@ -61,7 +85,9 @@ struct POIDetailView: View {
                 longitude: poi.longitude,
                 in: modelContext
             )
-            saveAlertMessage = "\(poi.name) was saved to your map."
+            saveAlertMessage = savedPlace == nil
+            ? "\(poi.name) is already saved for \(destinationName)."
+            : "\(poi.name) was saved to your map."
         } catch {
             saveAlertMessage = "Could not save this place right now."
         }

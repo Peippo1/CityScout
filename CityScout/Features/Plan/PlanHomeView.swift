@@ -1130,8 +1130,21 @@ struct PlanHomeView: View {
                     .accessibilityHint("Creates a new plan using your current preferences")
                 }
             }
+
+            plannerResilienceHint
         }
         .padding(.horizontal)
+    }
+
+    private var plannerResilienceHint: some View {
+        Label(
+            "Planner generation uses the backend. Explore, Search, Map, and Phrasebook still work locally if planning is unavailable.",
+            systemImage: "wifi.slash"
+        )
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
     }
 
     private var itinerarySection: some View {

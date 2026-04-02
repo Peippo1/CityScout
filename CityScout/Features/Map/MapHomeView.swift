@@ -133,6 +133,7 @@ struct MapHomeView: View {
     @State private var pendingPlaceName = ""
     @State private var isShowingSaveSheet = false
     @State private var isShowingSavedPlaces = false
+    @State private var selectedDetailPlace: SavedPlace?
     @State private var selectedPlaceID: UUID?
     @State private var filterMode: MapFilterMode = .all
     @State private var isShowingRoute = true
@@ -263,6 +264,16 @@ struct MapHomeView: View {
                         onSelectPlace: selectSavedPlace
                     )
                 }
+            }
+            .sheet(item: $selectedDetailPlace) { place in
+                SavedPlaceDetailView(
+                    place: place,
+                    onDelete: {
+                        if selectedPlaceID == place.id {
+                            selectedPlaceID = nil
+                        }
+                    }
+                )
             }
             .safeAreaInset(edge: .top) {
                 VStack(alignment: .leading, spacing: 12) {
@@ -536,12 +547,14 @@ struct MapHomeView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) {
                     openInMapsButton(for: place)
+                    detailButton(for: place)
                     deleteButton(for: place)
                     closeButton
                 }
 
                 VStack(spacing: 10) {
                     openInMapsButton(for: place)
+                    detailButton(for: place)
                     deleteButton(for: place)
                     closeButton
                 }
@@ -579,6 +592,16 @@ struct MapHomeView: View {
         .buttonStyle(.bordered)
         .accessibilityLabel("Delete \(place.name)")
         .accessibilityHint("Removes this saved place from the map.")
+    }
+
+    private func detailButton(for place: SavedPlace) -> some View {
+        Button("Details") {
+            selectedDetailPlace = place
+        }
+        .buttonStyle(.bordered)
+        .tint(.brandSage)
+        .accessibilityLabel("View details for \(place.name)")
+        .accessibilityHint("Shows more information and actions for this saved place.")
     }
 
     private var closeButton: some View {
