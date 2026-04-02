@@ -214,6 +214,22 @@ final class CityScoutTests: XCTestCase {
         XCTAssertNil(poi)
     }
 
+    func testTodayProgressStorePersistsSelectedItineraryAndActivityState() {
+        let itineraryID = UUID()
+        let destinationName = "Paris Test Destination"
+        let activityID = "Morning|0|Coffee"
+
+        TodayProgressStore.reset(itineraryID: itineraryID, destinationName: destinationName)
+
+        TodayProgressStore.setSelectedItineraryID(itineraryID, for: destinationName)
+        TodayProgressStore.setActivityState(.visited, for: activityID, itineraryID: itineraryID)
+
+        XCTAssertEqual(TodayProgressStore.selectedItineraryID(for: destinationName), itineraryID)
+        XCTAssertEqual(TodayProgressStore.activityState(for: activityID, itineraryID: itineraryID), .visited)
+
+        TodayProgressStore.reset(itineraryID: itineraryID, destinationName: destinationName)
+    }
+
     @MainActor
     func testPlanPersistenceCoordinatorPreventsDuplicatePlacesWithinDestination() throws {
         let container = try makeInMemoryContainer()

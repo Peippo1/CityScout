@@ -5,6 +5,7 @@ import SwiftData
 final class SavedItinerary {
     private static let csvSeparator = ","
 
+    var id: UUID
     var destinationName: String
     var createdAt: Date
     var customTitle: String
@@ -44,6 +45,7 @@ final class SavedItinerary {
     }
 
     init(
+        id: UUID = UUID(),
         destinationName: String,
         createdAt: Date = Date(),
         customTitle: String = "",
@@ -57,6 +59,7 @@ final class SavedItinerary {
         eveningActivitiesCSV: String,
         notesCSV: String
     ) {
+        self.id = id
         self.destinationName = destinationName
         self.createdAt = createdAt
         self.customTitle = customTitle

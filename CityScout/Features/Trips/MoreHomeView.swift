@@ -98,6 +98,19 @@ struct MoreHomeView: View {
 
             Section("Saved") {
                 NavigationLink {
+                    TodayHomeView(destinationName: destinationName)
+                } label: {
+                    MoreRow(
+                        title: "Today",
+                        subtitle: "Work through today’s saved plan",
+                        systemImage: "sun.max"
+                    )
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Today")
+                .accessibilityHint("Opens today mode for \(destinationName).")
+
+                NavigationLink {
                     PlanHomeView(destinationName: destinationName)
                 } label: {
                     MoreRow(
