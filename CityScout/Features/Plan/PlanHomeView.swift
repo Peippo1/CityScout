@@ -94,6 +94,13 @@ enum PlanSavedPlaceSupport {
         case evening
     }
 
+    private struct ResolvedActivityCandidate {
+        let name: String
+        let category: POICategory?
+        let latitude: Double
+        let longitude: Double
+    }
+
     static func normalizedActivityName(_ activity: String) -> String {
         let collapsedWhitespace = activity
             .components(separatedBy: .whitespacesAndNewlines)
@@ -225,6 +232,62 @@ enum PlanSavedPlaceSupport {
         )
     }
 
+    static func optimizeItinerary(
+        _ itinerary: PlanAPIService.ItineraryResponse,
+        destinationName: String,
+        resolveSavedPlace: (String) -> ResolvedItineraryPlace
+    ) -> PlanAPIService.ItineraryResponse {
+        let allActivities = orderedUniqueActivityNames(
+            from: itinerary.morning.activities
+                + itinerary.afternoon.activities
+                + itinerary.evening.activities
+        )
+
+        let morningTarget = itinerary.morning.activities.count
+        let afternoonTarget = itinerary.afternoon.activities.count
+        let eveningTarget = itinerary.evening.activities.count
+
+        var remainingActivities = allActivities.map { activity in
+            let resolvedPlace = resolveSavedPlace(activity)
+            return ResolvedActivityCandidate(
+                name: activity,
+                category: resolvedPlace.category,
+                latitude: resolvedPlace.latitude,
+                longitude: resolvedPlace.longitude
+            )
+        }
+
+        let morningActivities = takeOptimizedActivities(
+            from: &remainingActivities,
+            preferredCategories: [.cafes, .sights],
+            limit: morningTarget
+        )
+        let eveningActivities = takeOptimizedActivities(
+            from: &remainingActivities,
+            preferredCategories: [.food, .nightlife, .shopping],
+            limit: eveningTarget
+        )
+        let afternoonActivities = takeOptimizedActivities(
+            from: &remainingActivities,
+            preferredCategories: [.sights, .shopping, .cafes],
+            limit: afternoonTarget
+        )
+
+        return PlanAPIService.ItineraryResponse(
+            destination: destinationName,
+            morning: .init(title: itinerary.morning.title, activities: morningActivities),
+            afternoon: .init(title: itinerary.afternoon.title, activities: afternoonActivities),
+            evening: .init(title: itinerary.evening.title, activities: eveningActivities),
+            notes: optimizedNotes(
+                existingNotes: itinerary.notes,
+                destinationName: destinationName,
+                changedOrder: morningActivities != itinerary.morning.activities
+                    || afternoonActivities != itinerary.afternoon.activities
+                    || eveningActivities != itinerary.evening.activities
+            )
+        )
+    }
+
     private static func orderedUniqueSavedPlaces(from savedPlaces: [SavedPlace]) -> [SavedPlace] {
         var seenNames: Set<String> = []
         var orderedPlaces: [SavedPlace] = []
@@ -285,6 +348,69 @@ enum PlanSavedPlaceSupport {
         return selectedNames
     }
 
+    private static func takeOptimizedActivities(
+        from activities: inout [ResolvedActivityCandidate],
+        preferredCategories: [POICategory],
+        limit: Int
+    ) -> [String] {
+        guard limit > 0, activities.isEmpty == false else { return [] }
+
+        let preferredSet = Set(preferredCategories)
+        var selectedActivities: [ResolvedActivityCandidate] = []
+        var matchedIndices: [Int] = []
+
+        for index in activities.indices where matchedIndices.count < limit {
+            guard let category = activities[index].category, preferredSet.contains(category) else { continue }
+            matchedIndices.append(index)
+            selectedActivities.append(activities[index])
+        }
+
+        for index in matchedIndices.reversed() {
+            activities.remove(at: index)
+        }
+
+        while selectedActivities.count < limit, activities.isEmpty == false {
+            selectedActivities.append(activities.removeFirst())
+        }
+
+        return orderedActivitiesByProximity(selectedActivities).map(\.name)
+    }
+
+    private static func orderedActivitiesByProximity(
+        _ activities: [ResolvedActivityCandidate]
+    ) -> [ResolvedActivityCandidate] {
+        guard activities.count > 1 else { return activities }
+
+        var mappedActivities = activities.filter { $0.latitude != 0 || $0.longitude != 0 }
+        let fallbackActivities = activities.filter { $0.latitude == 0 && $0.longitude == 0 }
+
+        guard mappedActivities.count > 1 else {
+            return mappedActivities + fallbackActivities
+        }
+
+        var orderedActivities: [ResolvedActivityCandidate] = [mappedActivities.removeFirst()]
+
+        while mappedActivities.isEmpty == false, let currentActivity = orderedActivities.last {
+            let nextIndex = mappedActivities.enumerated().min { lhs, rhs in
+                distance(from: currentActivity, to: lhs.element) < distance(from: currentActivity, to: rhs.element)
+            }?.offset
+
+            guard let nextIndex else { break }
+            orderedActivities.append(mappedActivities.remove(at: nextIndex))
+        }
+
+        return orderedActivities + fallbackActivities
+    }
+
+    private static func distance(
+        from lhs: ResolvedActivityCandidate,
+        to rhs: ResolvedActivityCandidate
+    ) -> Double {
+        let latitudeDelta = lhs.latitude - rhs.latitude
+        let longitudeDelta = lhs.longitude - rhs.longitude
+        return (latitudeDelta * latitudeDelta) + (longitudeDelta * longitudeDelta)
+    }
+
     private static func buildFromSavedPlacesNotes(
         totalPlaceCount: Int,
         representedSections: [Bool]
@@ -303,6 +429,22 @@ enum PlanSavedPlaceSupport {
         }
 
         return notes
+    }
+
+    private static func optimizedNotes(
+        existingNotes: [String],
+        destinationName: String,
+        changedOrder: Bool
+    ) -> [String] {
+        let note = changedOrder
+            ? "Optimised locally for a smoother \(destinationName) day by grouping similar stops and keeping nearby places together where possible."
+            : "Checked locally and your current day is already balanced for \(destinationName)."
+
+        if existingNotes.contains(note) {
+            return existingNotes
+        }
+
+        return [note] + existingNotes
     }
 }
 
@@ -664,6 +806,28 @@ private final class PlanHomeViewModel: ObservableObject {
         }
 
         showFeedback("Built a local plan from saved places", symbol: "sparkles")
+    }
+
+    func optimizeItinerary(
+        destinationName: String,
+        resolveSavedPlace: (String) -> ResolvedItineraryPlace
+    ) {
+        guard let itinerary else { return }
+
+        let optimizedItinerary = PlanSavedPlaceSupport.optimizeItinerary(
+            itinerary,
+            destinationName: destinationName,
+            resolveSavedPlace: resolveSavedPlace
+        )
+
+        persistedItinerarySignature = nil
+        errorMessage = nil
+
+        withAnimation(.easeInOut(duration: 0.25)) {
+            self.itinerary = optimizedItinerary
+        }
+
+        showFeedback("Optimized your day locally", symbol: "arrow.triangle.branch")
     }
 
     func loadSavedItinerary(_ savedItinerary: SavedItinerary, signature: String) {
@@ -1414,6 +1578,22 @@ struct PlanHomeView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    Button {
+                        viewModel.optimizeItinerary(
+                            destinationName: destinationName,
+                            resolveSavedPlace: resolvedSavedPlace
+                        )
+                    } label: {
+                        Label("Optimize Day", systemImage: "arrow.triangle.branch")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.brandPink)
+                    .disabled(viewModel.isLoading)
+                    .accessibilityLabel("Optimize day")
+                    .accessibilityHint("Reorders your plan locally to keep similar and nearby stops together.")
 
                     Button {
                         Task {

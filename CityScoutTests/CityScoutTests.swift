@@ -229,6 +229,69 @@ final class CityScoutTests: XCTestCase {
         XCTAssertEqual(itinerary?.evening.activities, ["  old   louvre  "])
     }
 
+    func testOptimizeItineraryBalancesTimeOfDayCategories() {
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Wine Bar", "Bakery"]),
+            afternoon: .init(title: "Afternoon", activities: ["Department Store"]),
+            evening: .init(title: "Evening", activities: ["Museum Visit"]),
+            notes: []
+        )
+
+        let optimized = PlanSavedPlaceSupport.optimizeItinerary(
+            itinerary,
+            destinationName: "Paris",
+            resolveSavedPlace: { activity in
+                switch activity {
+                case "Bakery":
+                    return ResolvedItineraryPlace(name: activity, category: .cafes, latitude: 48.85, longitude: 2.33)
+                case "Museum Visit":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.86, longitude: 2.34)
+                case "Department Store":
+                    return ResolvedItineraryPlace(name: activity, category: .shopping, latitude: 48.87, longitude: 2.35)
+                case "Wine Bar":
+                    return ResolvedItineraryPlace(name: activity, category: .nightlife, latitude: 48.88, longitude: 2.36)
+                default:
+                    return ResolvedItineraryPlace(name: activity, category: nil, latitude: 0, longitude: 0)
+                }
+            }
+        )
+
+        XCTAssertEqual(optimized.morning.activities, ["Bakery", "Museum Visit"])
+        XCTAssertEqual(optimized.afternoon.activities, ["Department Store"])
+        XCTAssertEqual(optimized.evening.activities, ["Wine Bar"])
+        XCTAssertTrue(optimized.notes.first?.contains("Optimised locally") == true)
+    }
+
+    func testOptimizeItineraryKeepsNearbyMappedStopsTogether() {
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: []),
+            afternoon: .init(title: "Afternoon", activities: ["Arc", "Louvre", "Montmartre"]),
+            evening: .init(title: "Evening", activities: []),
+            notes: []
+        )
+
+        let optimized = PlanSavedPlaceSupport.optimizeItinerary(
+            itinerary,
+            destinationName: "Paris",
+            resolveSavedPlace: { activity in
+                switch activity {
+                case "Arc":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.8738, longitude: 2.2950)
+                case "Louvre":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.8606, longitude: 2.3376)
+                case "Montmartre":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.8867, longitude: 2.3431)
+                default:
+                    return ResolvedItineraryPlace(name: activity, category: nil, latitude: 0, longitude: 0)
+                }
+            }
+        )
+
+        XCTAssertEqual(optimized.afternoon.activities, ["Arc", "Louvre", "Montmartre"])
+    }
+
     func testItinerarySignatureChangesWhenNotesChange() {
         let baseItinerary = PlanAPIService.ItineraryResponse(
             destination: "Paris",
