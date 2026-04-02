@@ -35,16 +35,22 @@ struct PlanSkeletonBuilder {
         let preferences = context.normalizedPreferences
         let prompt = context.prompt.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
 
-        if preferences.contains(PlanPreference.relaxed.rawValue) || prompt.contains("relaxed") {
+        if preferences.contains("relaxed") || prompt.contains("relaxed") {
             afternoonCount = max(afternoonCount - 1, 1)
         }
 
-        if preferences.contains(PlanPreference.foodFocused.rawValue) || prompt.contains("food") {
+        if preferences.contains("foodfocused") || preferences.contains("food-focused") || prompt.contains("food") {
             eveningCount = min(max(eveningCount, 2), candidateCount)
         }
 
-        if preferences.contains(PlanPreference.nightOut.rawValue) || prompt.contains("night") {
+        if preferences.contains("nightout") || preferences.contains("night out") || prompt.contains("night") {
             eveningCount = min(max(eveningCount, 2), candidateCount)
+        }
+
+        let lowConfidenceDay = candidateCount <= 3
+        if lowConfidenceDay {
+            afternoonCount = min(afternoonCount, 1)
+            eveningCount = min(eveningCount, 1)
         }
 
         let total = morningCount + afternoonCount + eveningCount

@@ -26,6 +26,7 @@ struct PlannedActivity: Identifiable, Hashable {
     let latitude: Double?
     let longitude: Double?
     let source: PlannedActivitySource
+    let explanations: [String]
 }
 
 struct PlannedSection: Identifiable, Hashable {

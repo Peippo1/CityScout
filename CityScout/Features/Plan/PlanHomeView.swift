@@ -1109,6 +1109,7 @@ struct PlanHomeView: View {
     @Query private var savedItineraries: [SavedItinerary]
     @StateObject private var viewModel = PlanHomeViewModel()
     @State private var selectedSavedItineraryForReview: SavedItinerary?
+    private let plannerExplainer = PlannerExplainer()
 
     private let preferenceColumns = [
         GridItem(.adaptive(minimum: 140), spacing: 10, alignment: .leading)
@@ -1866,6 +1867,7 @@ struct PlanHomeView: View {
 
     private func activityMetadataText(for activity: PlannedActivity) -> String {
         let status = PlanActivitySaveStatus(mappingStatus: activity.mappingStatus)
+        let sourceText: String
         let confidenceText: String
 
         switch activity.confidence {
@@ -1879,12 +1881,14 @@ struct PlanHomeView: View {
 
         switch activity.source {
         case .aiGenerated:
-            return "\(status.text) • \(confidenceText)"
+            sourceText = status.text
         case .builtFromSaved:
-            return "Built from saved places • \(confidenceText)"
+            sourceText = "Built from saved places"
         case .optimizedExisting:
-            return "Optimized locally • \(confidenceText)"
+            sourceText = "Optimized locally"
         }
+
+        return "\(sourceText) • \(plannerExplainer.microcopy(for: activity)) • \(confidenceText)"
     }
 
     private func normalizedActivityName(_ activity: String) -> String {

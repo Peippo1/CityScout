@@ -22,7 +22,7 @@ struct PlanningCandidate: Identifiable, Hashable {
 struct CandidateScore {
     let candidateID: String
     let total: Int
-    let reasons: [String]
+    let reasons: [PlanningReason]
 }
 
 struct PlanSkeleton {

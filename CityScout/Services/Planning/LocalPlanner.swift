@@ -5,18 +5,17 @@ struct LocalPlanner {
     private let scorer = PlannerScorer()
     private let skeletonBuilder = PlanSkeletonBuilder()
     private let narrativeBuilder = PlanningNarrativeBuilder()
+    private let explainer = PlannerExplainer()
 
     func buildFromSaved(context: PlanningContext) -> LocalPlannedItinerary? {
         let candidates = candidateBuilder.savedPlaceCandidates(from: context)
         guard candidates.isEmpty == false else { return nil }
 
         let skeleton = skeletonBuilder.skeleton(for: context, candidateCount: candidates.count)
-        let selection = selectCandidates(
-            from: candidates,
+        let selection = SectionAllocator(scorer: scorer).allocate(
+            candidates: candidates,
             context: context,
-            morningCount: skeleton.morningCount,
-            afternoonCount: skeleton.afternoonCount,
-            eveningCount: skeleton.eveningCount
+            skeleton: skeleton
         )
 
         return makeItinerary(
@@ -49,12 +48,10 @@ struct LocalPlanner {
         )
         guard combinedCandidates.isEmpty == false else { return nil }
 
-        let selection = selectCandidates(
-            from: combinedCandidates,
+        let selection = allocateConservativeOptimization(
+            candidates: combinedCandidates,
+            existingItinerary: existingItinerary,
             context: context,
-            morningCount: existingItinerary.morning.activities.count,
-            afternoonCount: existingItinerary.afternoon.activities.count,
-            eveningCount: existingItinerary.evening.activities.count,
             preserveExistingBias: true
         )
 
@@ -124,104 +121,11 @@ struct LocalPlanner {
             afternoon: baseItinerary.afternoon,
             evening: baseItinerary.evening,
             notes: baseItinerary.notes,
-            narrative: narrativeBuilder.narrative(for: baseItinerary)
-        )
-    }
-
-    private func selectCandidates(
-        from candidates: [PlanningCandidate],
-        context: PlanningContext,
-        morningCount: Int,
-        afternoonCount: Int,
-        eveningCount: Int,
-        preserveExistingBias: Bool = false
-    ) -> (morning: [PlanningCandidate], afternoon: [PlanningCandidate], evening: [PlanningCandidate]) {
-        var remainingCandidates = candidates
-        let morning = pickCandidates(
-            from: &remainingCandidates,
-            for: .morning,
-            limit: morningCount,
-            context: context,
-            preserveExistingBias: preserveExistingBias
-        )
-        let evening = pickCandidates(
-            from: &remainingCandidates,
-            for: .evening,
-            limit: eveningCount,
-            context: context,
-            preserveExistingBias: preserveExistingBias
-        )
-        let afternoon = pickCandidates(
-            from: &remainingCandidates,
-            for: .afternoon,
-            limit: afternoonCount,
-            context: context,
-            preserveExistingBias: preserveExistingBias
-        )
-
-        return (morning, afternoon, evening)
-    }
-
-    private func pickCandidates(
-        from candidates: inout [PlanningCandidate],
-        for section: TimeOfDayTag,
-        limit: Int,
-        context: PlanningContext,
-        preserveExistingBias: Bool
-    ) -> [PlanningCandidate] {
-        guard limit > 0, candidates.isEmpty == false else { return [] }
-
-        var selectedCandidates: [PlanningCandidate] = []
-
-        while selectedCandidates.count < limit, candidates.isEmpty == false {
-            let bestMatch = candidates.enumerated().max { lhs, rhs in
-                let lhsScore = candidateScore(
-                    lhs.element,
-                    section: section,
-                    selectedCandidates: selectedCandidates,
-                    context: context,
-                    preserveExistingBias: preserveExistingBias
-                )
-                let rhsScore = candidateScore(
-                    rhs.element,
-                    section: section,
-                    selectedCandidates: selectedCandidates,
-                    context: context,
-                    preserveExistingBias: preserveExistingBias
-                )
-                return lhsScore.total < rhsScore.total
-            }
-
-            guard let bestMatch else { break }
-            selectedCandidates.append(candidates.remove(at: bestMatch.offset))
-        }
-
-        return LocalRouteOptimizer.optimize(selectedCandidates)
-    }
-
-    private func candidateScore(
-        _ candidate: PlanningCandidate,
-        section: TimeOfDayTag,
-        selectedCandidates: [PlanningCandidate],
-        context: PlanningContext,
-        preserveExistingBias: Bool
-    ) -> CandidateScore {
-        var baseScore = scorer.score(
-            candidate: candidate,
-            for: section,
-            selectedCandidates: selectedCandidates,
-            context: context
-        )
-
-        if preserveExistingBias, candidate.source == SavedPlace.Source.itinerary.rawValue {
-            baseScore = CandidateScore(
-                candidateID: baseScore.candidateID,
-                total: baseScore.total + 2,
-                reasons: baseScore.reasons + ["Preserves current plan"]
+            narrative: narrativeBuilder.narrative(
+                for: baseItinerary,
+                preferences: context.normalizedPreferences
             )
-        }
-
-        return baseScore
+        )
     }
 
     private func mergeCandidates(
@@ -269,6 +173,120 @@ struct LocalPlanner {
         }
     }
 
+    private func allocateConservativeOptimization(
+        candidates: [PlanningCandidate],
+        existingItinerary: PlanAPIService.ItineraryResponse,
+        context: PlanningContext,
+        preserveExistingBias: Bool
+    ) -> (morning: [PlanningCandidate], afternoon: [PlanningCandidate], evening: [PlanningCandidate]) {
+        let skeleton = PlanSkeleton(
+            morningCount: existingItinerary.morning.activities.count,
+            afternoonCount: existingItinerary.afternoon.activities.count,
+            eveningCount: existingItinerary.evening.activities.count
+        )
+        let allocatedSections = SectionAllocator(scorer: scorer).allocate(
+            candidates: candidates,
+            context: context,
+            skeleton: skeleton,
+            preserveExistingBias: preserveExistingBias
+        )
+
+        return (
+            morning: conservativelyMergedSection(
+                allocatedCandidates: allocatedSections.morning,
+                existingActivities: existingItinerary.morning.activities,
+                section: .morning,
+                context: context
+            ),
+            afternoon: conservativelyMergedSection(
+                allocatedCandidates: allocatedSections.afternoon,
+                existingActivities: existingItinerary.afternoon.activities,
+                section: .afternoon,
+                context: context
+            ),
+            evening: conservativelyMergedSection(
+                allocatedCandidates: allocatedSections.evening,
+                existingActivities: existingItinerary.evening.activities,
+                section: .evening,
+                context: context
+            )
+        )
+    }
+
+    private func conservativelyMergedSection(
+        allocatedCandidates: [PlanningCandidate],
+        existingActivities: [String],
+        section: TimeOfDayTag,
+        context: PlanningContext
+    ) -> [PlanningCandidate] {
+        guard existingActivities.isEmpty == false else {
+            return allocatedCandidates
+        }
+
+        var availableReplacements = allocatedCandidates
+        var mergedCandidates: [PlanningCandidate] = []
+
+        for activity in existingActivities {
+            let existingCandidate = candidateBuilder.candidate(
+                name: activity,
+                mappedPlaceName: activity,
+                category: ItineraryCategoryInference.inferCategory(from: activity),
+                destinationName: context.destinationName,
+                latitude: 0,
+                longitude: 0,
+                source: SavedPlace.Source.itinerary.rawValue
+            )
+
+            let existingScore = scorer.score(
+                candidate: existingCandidate,
+                for: section,
+                selectedCandidates: mergedCandidates,
+                context: context,
+                preserveExistingBias: true
+            )
+
+            guard let replacementIndex = availableReplacements.indices.max(by: { lhs, rhs in
+                scorer.score(
+                    candidate: availableReplacements[lhs],
+                    for: section,
+                    selectedCandidates: mergedCandidates,
+                    context: context,
+                    preserveExistingBias: false
+                ).total < scorer.score(
+                    candidate: availableReplacements[rhs],
+                    for: section,
+                    selectedCandidates: mergedCandidates,
+                    context: context,
+                    preserveExistingBias: false
+                ).total
+            }) else {
+                mergedCandidates.append(existingCandidate)
+                continue
+            }
+
+            let replacementCandidate = availableReplacements[replacementIndex]
+            let replacementScore = scorer.score(
+                candidate: replacementCandidate,
+                for: section,
+                selectedCandidates: mergedCandidates,
+                context: context,
+                preserveExistingBias: false
+            )
+
+            if PlanningRules.shouldPreferReplacement(
+                currentScore: existingScore,
+                replacementScore: replacementScore
+            ) {
+                mergedCandidates.append(replacementCandidate)
+                availableReplacements.remove(at: replacementIndex)
+            } else {
+                mergedCandidates.append(existingCandidate)
+            }
+        }
+
+        return LocalRouteOptimizer.optimize(mergedCandidates)
+    }
+
     private func makeItinerary(
         context: PlanningContext,
         destinationName: String,
@@ -306,7 +324,10 @@ struct LocalPlanner {
             afternoon: baseItinerary.afternoon,
             evening: baseItinerary.evening,
             notes: baseItinerary.notes,
-            narrative: narrativeBuilder.narrative(for: baseItinerary)
+            narrative: narrativeBuilder.narrative(
+                for: baseItinerary,
+                preferences: context.normalizedPreferences
+            )
         )
     }
 
@@ -335,7 +356,8 @@ struct LocalPlanner {
             confidence: confidence,
             latitude: candidate.hasCoordinates ? candidate.latitude : nil,
             longitude: candidate.hasCoordinates ? candidate.longitude : nil,
-            source: source
+            source: source,
+            explanations: explainer.explanations(for: score.reasons, source: source)
         )
     }
 

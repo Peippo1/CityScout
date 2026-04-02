@@ -5,61 +5,41 @@ struct PlannerScorer {
         candidate: PlanningCandidate,
         for section: TimeOfDayTag,
         selectedCandidates: [PlanningCandidate],
-        context: PlanningContext
+        context: PlanningContext,
+        preserveExistingBias: Bool = false
     ) -> CandidateScore {
         var total = 0
-        var reasons: [String] = []
+        var reasons: [PlanningReason] = []
 
-        if candidate.timeOfDayTags.contains(section) || candidate.timeOfDayTags.contains(.anytime) {
-            total += 2
-            reasons.append("Good \(section.rawValue) fit")
-        }
+        let timeScore = PlanningRules.timeOfDayScore(candidate: candidate, section: section)
+        total += timeScore.score
+        if let reason = timeScore.reason { reasons.append(reason) }
 
-        if candidate.isMapped {
-            total += 2
-            reasons.append("Mapped place")
-        } else if selectedCandidates.isEmpty == false {
-            total -= 1
-            reasons.append("No coordinates")
-        }
+        let mappedScore = PlanningRules.mappedScore(candidate: candidate, isRouteAware: selectedCandidates.isEmpty == false)
+        total += mappedScore.score
+        if let reason = mappedScore.reason { reasons.append(reason) }
 
-        if let category = candidate.category, preferenceBonus(for: category, preferences: context.normalizedPreferences) > 0 {
-            let bonus = preferenceBonus(for: category, preferences: context.normalizedPreferences)
-            total += bonus
-            reasons.append("Matches preferences")
-        }
+        let preferenceScore = PlanningRules.preferenceScore(candidate: candidate, preferences: context.normalizedPreferences)
+        total += preferenceScore.score
+        if let reason = preferenceScore.reason { reasons.append(reason) }
 
-        if context.normalizedVisitedPlaceNames.contains(candidate.normalizedName) {
-            total -= 5
-            reasons.append("Already visited")
-        }
+        let statusPenalty = PlanningRules.statusPenalty(candidate: candidate, context: context)
+        total += statusPenalty.score
+        if let reason = statusPenalty.reason { reasons.append(reason) }
 
-        if context.normalizedSkippedActivityNames.contains(candidate.normalizedName) {
-            total -= 4
-            reasons.append("Previously skipped")
-        }
+        let proximityBonus = PlanningRules.proximityBonus(distance: nearestDistance(from: candidate, to: selectedCandidates))
+        total += proximityBonus.score
+        if let reason = proximityBonus.reason { reasons.append(reason) }
 
-        if let nearestDistance = nearestDistance(from: candidate, to: selectedCandidates), nearestDistance < 0.0025 {
-            total += 2
-            reasons.append("Near another stop")
-        }
+        let repeatPenalty = PlanningRules.repeatedCategoryPenalty(candidate: candidate, selectedCandidates: selectedCandidates)
+        total += repeatPenalty.score
+        if let reason = repeatPenalty.reason { reasons.append(reason) }
+
+        let preserveBonus = PlanningRules.preserveCurrentPlanBonus(candidate: candidate, preserveExistingBias: preserveExistingBias)
+        total += preserveBonus.score
+        if let reason = preserveBonus.reason { reasons.append(reason) }
 
         return CandidateScore(candidateID: candidate.id, total: total, reasons: reasons)
-    }
-
-    private func preferenceBonus(for category: POICategory, preferences: Set<String>) -> Int {
-        switch category {
-        case .cafes:
-            return preferences.contains("cafes") ? 3 : 0
-        case .food:
-            return preferences.contains("foodfocused") || preferences.contains("food-focused") ? 3 : 0
-        case .sights:
-            return preferences.contains("sightseeing") ? 3 : 0
-        case .nightlife:
-            return preferences.contains("nightout") || preferences.contains("night out") ? 3 : 0
-        case .shopping:
-            return preferences.contains("relaxed") ? 1 : 0
-        }
     }
 
     private func nearestDistance(from candidate: PlanningCandidate, to selectedCandidates: [PlanningCandidate]) -> Double? {
