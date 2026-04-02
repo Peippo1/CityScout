@@ -14,7 +14,7 @@ if cors_origins:
         allow_origins=cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type", "X-CityScout-App-Secret"],
+        allow_headers=["Content-Type"],
     )
 
 

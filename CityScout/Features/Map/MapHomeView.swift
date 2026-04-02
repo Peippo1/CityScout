@@ -24,6 +24,51 @@ private struct DestinationViewport {
     }
 }
 
+private enum SavedPlaceViewportSupport {
+    static func region(
+        for coordinates: [CLLocationCoordinate2D],
+        fallbackSpan: MKCoordinateSpan
+    ) -> MKCoordinateRegion? {
+        guard coordinates.isEmpty == false else { return nil }
+
+        if coordinates.count == 1, let coordinate = coordinates.first {
+            return MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(
+                    latitudeDelta: min(fallbackSpan.latitudeDelta, 0.04),
+                    longitudeDelta: min(fallbackSpan.longitudeDelta, 0.04)
+                )
+            )
+        }
+
+        let latitudes = coordinates.map(\.latitude)
+        let longitudes = coordinates.map(\.longitude)
+
+        guard
+            let minLatitude = latitudes.min(),
+            let maxLatitude = latitudes.max(),
+            let minLongitude = longitudes.min(),
+            let maxLongitude = longitudes.max()
+        else {
+            return nil
+        }
+
+        let latitudeDelta = max((maxLatitude - minLatitude) * 1.45, 0.03)
+        let longitudeDelta = max((maxLongitude - minLongitude) * 1.45, 0.03)
+
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: (minLatitude + maxLatitude) / 2,
+                longitude: (minLongitude + maxLongitude) / 2
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta: max(latitudeDelta, fallbackSpan.latitudeDelta * 0.35),
+                longitudeDelta: max(longitudeDelta, fallbackSpan.longitudeDelta * 0.35)
+            )
+        )
+    }
+}
+
 @MainActor
 private final class MapLocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var authorizationStatus: CLAuthorizationStatus
@@ -88,6 +133,7 @@ struct MapHomeView: View {
     @State private var pendingPlaceName = ""
     @State private var isShowingSaveSheet = false
     @State private var isShowingSavedPlaces = false
+    @State private var selectedDetailPlace: SavedPlace?
     @State private var selectedPlaceID: UUID?
     @State private var filterMode: MapFilterMode = .all
     @State private var isShowingRoute = true
@@ -126,14 +172,36 @@ struct MapHomeView: View {
         savedPlaces.filter(\.isItineraryDerived)
     }
 
+    private var mappableFilteredSavedPlaces: [SavedPlace] {
+        filteredSavedPlaces.filter(\.hasUsableMapCoordinate)
+    }
+
     private var validItineraryRoutePlaces: [SavedPlace] {
-        itineraryPlaces.filter { place in
-            place.latitude != 0 && place.longitude != 0
-        }
+        itineraryPlaces.filter(\.hasUsableMapCoordinate)
     }
 
     private var itineraryRouteCoordinates: [CLLocationCoordinate2D] {
         validItineraryRoutePlaces.map(coordinate(for:))
+    }
+
+    private var unmatchedItineraryPlaces: [SavedPlace] {
+        itineraryPlaces.filter(\.isUnmatchedItineraryPlace)
+    }
+
+    private var itineraryMappingHint: String? {
+        guard filterMode == .itinerary, unmatchedItineraryPlaces.isEmpty == false else {
+            return nil
+        }
+
+        if validItineraryRoutePlaces.isEmpty {
+            return unmatchedItineraryPlaces.count == 1
+            ? "1 itinerary place is saved without map coordinates yet."
+            : "\(unmatchedItineraryPlaces.count) itinerary places are saved without map coordinates yet."
+        }
+
+        return unmatchedItineraryPlaces.count == 1
+        ? "Route and centering use matched stops. 1 itinerary place is still generic."
+        : "Route and centering use matched stops. \(unmatchedItineraryPlaces.count) itinerary places are still generic."
     }
 
     private var shouldShowItineraryEmptyState: Bool {
@@ -167,7 +235,7 @@ struct MapHomeView: View {
                     // TODO: replace this straight-line path with route optimization when mapped itinerary data is richer.
                 }
 
-                ForEach(filteredSavedPlaces) { place in
+                ForEach(mappableFilteredSavedPlaces) { place in
                     Annotation(place.name, coordinate: coordinate(for: place), anchor: .bottom) {
                         savedPlaceAnnotation(for: place)
                     }
@@ -197,6 +265,16 @@ struct MapHomeView: View {
                     )
                 }
             }
+            .sheet(item: $selectedDetailPlace) { place in
+                SavedPlaceDetailView(
+                    place: place,
+                    onDelete: {
+                        if selectedPlaceID == place.id {
+                            selectedPlaceID = nil
+                        }
+                    }
+                )
+            }
             .safeAreaInset(edge: .top) {
                 VStack(alignment: .leading, spacing: 12) {
                     CityHeaderView(destinationName: destinationName)
@@ -220,6 +298,13 @@ struct MapHomeView: View {
                             .toggleStyle(.switch)
                             .accessibilityLabel("Show Route")
                             .accessibilityValue(isShowingRoute ? "On" : "Off")
+                    }
+
+                    if let itineraryMappingHint {
+                        Label(itineraryMappingHint, systemImage: "info.circle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     HStack(spacing: 10) {
@@ -276,7 +361,7 @@ struct MapHomeView: View {
                     ContentUnavailableView(
                         "Not enough mapped itinerary stops yet",
                         systemImage: "point.topleft.down.curvedto.point.bottomright.up",
-                        description: Text("Save places with locations to visualise your route")
+                        description: Text("The map only routes across matched itinerary places with real coordinates.")
                     )
                     .padding()
                     .background(Color.brandCream.opacity(0.94), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -300,19 +385,21 @@ struct MapHomeView: View {
             .animation(.easeInOut(duration: 0.2), value: isShowingRoute)
             .task {
                 guard hasCenteredOnDestination == false else { return }
-                centerOnDestination()
+                centerOnBestAvailableContent()
                 hasCenteredOnDestination = true
             }
             .onChange(of: destinationName) { _, _ in
                 hasCenteredOnDestination = false
-                centerOnDestination()
+                centerOnBestAvailableContent()
                 hasCenteredOnDestination = true
             }
             .onChange(of: filterMode) { _, _ in
-                guard let selectedPlaceID else { return }
-                if filteredSavedPlaces.contains(where: { $0.id == selectedPlaceID }) == false {
+                if let selectedPlaceID,
+                   filteredSavedPlaces.contains(where: { $0.id == selectedPlaceID }) == false {
                     self.selectedPlaceID = nil
                 }
+
+                centerOnBestAvailableContent()
             }
             .onChange(of: locationManager.currentLocation) { _, location in
                 guard let location else { return }
@@ -460,12 +547,14 @@ struct MapHomeView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) {
                     openInMapsButton(for: place)
+                    detailButton(for: place)
                     deleteButton(for: place)
                     closeButton
                 }
 
                 VStack(spacing: 10) {
                     openInMapsButton(for: place)
+                    detailButton(for: place)
                     deleteButton(for: place)
                     closeButton
                 }
@@ -503,6 +592,16 @@ struct MapHomeView: View {
         .buttonStyle(.bordered)
         .accessibilityLabel("Delete \(place.name)")
         .accessibilityHint("Removes this saved place from the map.")
+    }
+
+    private func detailButton(for place: SavedPlace) -> some View {
+        Button("Details") {
+            selectedDetailPlace = place
+        }
+        .buttonStyle(.bordered)
+        .tint(.brandSage)
+        .accessibilityLabel("View details for \(place.name)")
+        .accessibilityHint("Shows more information and actions for this saved place.")
     }
 
     private var closeButton: some View {
@@ -653,6 +752,12 @@ struct MapHomeView: View {
     private func selectSavedPlace(_ place: SavedPlace) {
         selectedPlaceID = place.id
         isShowingSavedPlaces = false
+
+        guard place.hasUsableMapCoordinate else {
+            centerOnBestAvailableContent()
+            return
+        }
+
         position = .region(
             MKCoordinateRegion(
                 center: coordinate(for: place),
@@ -665,6 +770,30 @@ struct MapHomeView: View {
         guard let destinationViewport else { return }
         selectedPlaceID = nil
         position = .region(destinationViewport.region)
+    }
+
+    private func centerOnBestAvailableContent() {
+        let focusPlaces: [SavedPlace]
+        switch filterMode {
+        case .all:
+            focusPlaces = mappableFilteredSavedPlaces
+        case .itinerary:
+            focusPlaces = validItineraryRoutePlaces
+        }
+
+        if
+            let fallbackSpan = destinationViewport?.span ?? MKCoordinateSpan(latitudeDelta: 0.18, longitudeDelta: 0.18),
+            let region = SavedPlaceViewportSupport.region(
+                for: focusPlaces.map(coordinate(for:)),
+                fallbackSpan: fallbackSpan
+            )
+        {
+            selectedPlaceID = nil
+            position = .region(region)
+            return
+        }
+
+        centerOnDestination()
     }
 
     private func centerOnUserLocation() {

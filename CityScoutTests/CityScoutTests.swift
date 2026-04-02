@@ -3,6 +3,277 @@ import SwiftData
 @testable import CityScout
 
 final class CityScoutTests: XCTestCase {
+    func testPlannerConfigurationUsesUniversalBaseURLForHostedEnvironment() {
+        let configuration = AppEnvironment.resolvePlannerConfiguration(
+            infoDictionary: [
+                "CITYSCOUT_API_BASE_URL": "https://staging.cityscout.example",
+                "CITYSCOUT_SIMULATOR_API_BASE_URL": "http://127.0.0.1:8000",
+                "CITYSCOUT_DEVICE_API_BASE_URL": "http://192.168.1.10:8000"
+            ],
+            environment: [:],
+            isSimulator: false,
+            isDebugBuild: false
+        )
+
+        XCTAssertEqual(configuration.baseURLString, "https://staging.cityscout.example")
+        XCTAssertEqual(configuration.baseURLSource, "CITYSCOUT_API_BASE_URL")
+    }
+
+    func testPlannerConfigurationFallsBackToSimulatorLocalhostOnlyInDebug() {
+        let configuration = AppEnvironment.resolvePlannerConfiguration(
+            infoDictionary: [:],
+            environment: [:],
+            isSimulator: true,
+            isDebugBuild: true
+        )
+
+        XCTAssertEqual(configuration.baseURLString, "http://127.0.0.1:8000")
+        XCTAssertEqual(configuration.baseURLSource, "simulator fallback")
+    }
+
+    func testPlannerConfigurationRequiresExplicitDeviceURLOutsideSimulatorFallback() {
+        let configuration = AppEnvironment.resolvePlannerConfiguration(
+            infoDictionary: [:],
+            environment: [:],
+            isSimulator: false,
+            isDebugBuild: true
+        )
+
+        XCTAssertEqual(configuration.baseURLString, "")
+        XCTAssertEqual(configuration.baseURLSource, "unconfigured")
+    }
+
+    func testPlannerErrorPresentationProvidesFriendlyUnauthorizedMessage() {
+        let message = PlanPlannerErrorPresentation.message(for: PlanAPIService.ServiceError.unauthorized)
+
+        XCTAssertTrue(message.contains("Planner access isn't configured correctly right now."))
+    }
+
+    func testPlannerErrorPresentationProvidesFriendlyServerErrorMessage() {
+        let message = PlanPlannerErrorPresentation.message(for: PlanAPIService.ServiceError.serverError(statusCode: 503))
+
+        XCTAssertTrue(message.contains("Planner hit a server issue. Please try again shortly."))
+    }
+
+    func testOrderedUniqueActivityNamesPreservesFirstTrimmedValue() {
+        let activities = [
+            "  Louvre Museum  ",
+            "Cafe de Flore",
+            "louvre   museum",
+            "  ",
+            "Cafe   de   Flore"
+        ]
+
+        let uniqueActivities = PlanSavedPlaceSupport.orderedUniqueActivityNames(from: activities)
+
+        XCTAssertEqual(uniqueActivities, ["Louvre Museum", "Cafe de Flore"])
+    }
+
+    func testResolvedActivityNameUsesMatchedPOIName() {
+        let resolvedName = PlanSavedPlaceSupport.resolvedActivityName(
+            for: "Coffee near the Louvre",
+            resolveSavedPlace: { _ in
+                ResolvedItineraryPlace(
+                    name: "Louvre Museum",
+                    category: .sights,
+                    latitude: 48.8606,
+                    longitude: 2.3376
+                )
+            }
+        )
+
+        XCTAssertEqual(resolvedName, "louvre museum")
+    }
+
+    func testResolvedActivityNameFallsBackToOriginalActivityWhenResolvedNameBlank() {
+        let resolvedName = PlanSavedPlaceSupport.resolvedActivityName(
+            for: "  Coffee near Canal Saint-Martin  ",
+            resolveSavedPlace: { _ in
+                ResolvedItineraryPlace(
+                    name: "   ",
+                    category: nil,
+                    latitude: 0,
+                    longitude: 0
+                )
+            }
+        )
+
+        XCTAssertEqual(resolvedName, "coffee near canal saint-martin")
+    }
+
+    func testSavedPlaceNamesForRequestDeduplicatesAndKeepsNewestFirst() {
+        let olderPlace = SavedPlace(
+            name: "Louvre Museum",
+            category: .sights,
+            source: SavedPlace.Source.itinerary.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8606,
+            longitude: 2.3376,
+            createdAt: Date(timeIntervalSince1970: 100)
+        )
+        let newerDuplicate = SavedPlace(
+            name: "  Louvre   Museum  ",
+            category: .sights,
+            source: SavedPlace.Source.manual.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8606,
+            longitude: 2.3376,
+            createdAt: Date(timeIntervalSince1970: 200)
+        )
+        let newestUnique = SavedPlace(
+            name: "Cafe de Flore",
+            category: .cafes,
+            source: SavedPlace.Source.manual.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8546,
+            longitude: 2.3339,
+            createdAt: Date(timeIntervalSince1970: 300)
+        )
+
+        let requestNames = PlanSavedPlaceSupport.savedPlaceNamesForRequest(
+            from: [olderPlace, newestUnique, newerDuplicate]
+        )
+
+        XCTAssertEqual(requestNames, ["Cafe de Flore", "Louvre   Museum"])
+    }
+
+    func testItinerarySignatureChangesWhenNotesChange() {
+        let baseItinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Coffee"]),
+            afternoon: .init(title: "Afternoon", activities: ["Museum"]),
+            evening: .init(title: "Evening", activities: ["Dinner"]),
+            notes: ["Book ahead"]
+        )
+        let changedNotesItinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Coffee"]),
+            afternoon: .init(title: "Afternoon", activities: ["Museum"]),
+            evening: .init(title: "Evening", activities: ["Dinner"]),
+            notes: ["Walk-ins are fine"]
+        )
+
+        let baseSignature = PlanSavedPlaceSupport.itinerarySignature(
+            destinationName: "Paris",
+            prompt: "Plan me a day",
+            selectedPreferenceRawValues: ["cafes", "relaxed"],
+            itinerary: baseItinerary
+        )
+        let changedSignature = PlanSavedPlaceSupport.itinerarySignature(
+            destinationName: "Paris",
+            prompt: "Plan me a day",
+            selectedPreferenceRawValues: ["relaxed", "cafes"],
+            itinerary: changedNotesItinerary
+        )
+
+        XCTAssertNotEqual(baseSignature, changedSignature)
+    }
+
+    func testItineraryPlaceMatcherMatchesDistinctiveSingleTokenPlace() {
+        let poi = ItineraryPlaceMatcher.match(
+            destinationName: "Paris",
+            activityText: "Sunset photos around Montmartre"
+        )
+
+        XCTAssertEqual(poi?.name, "Montmartre")
+    }
+
+    func testItineraryPlaceMatcherRejectsGenericMuseumActivity() {
+        let poi = ItineraryPlaceMatcher.match(
+            destinationName: "Paris",
+            activityText: "Visit a museum and walk around the city"
+        )
+
+        XCTAssertNil(poi)
+    }
+
+    @MainActor
+    func testPlanPersistenceCoordinatorPreventsDuplicatePlacesWithinDestination() throws {
+        let container = try makeInMemoryContainer()
+        let modelContext = ModelContext(container)
+        let existingParisPlace = SavedPlace(
+            name: "Louvre Museum",
+            category: .sights,
+            source: SavedPlace.Source.manual.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8606,
+            longitude: 2.3376
+        )
+        let existingBarcelonaPlace = SavedPlace(
+            name: "Louvre Museum",
+            category: .sights,
+            source: SavedPlace.Source.manual.rawValue,
+            destinationName: "Barcelona",
+            latitude: 41.0,
+            longitude: 2.0
+        )
+        modelContext.insert(existingParisPlace)
+        modelContext.insert(existingBarcelonaPlace)
+        try modelContext.save()
+
+        let coordinator = PlanPersistenceCoordinator(
+            modelContext: modelContext,
+            destinationName: "Paris",
+            normalizeActivityName: PlanSavedPlaceSupport.normalizedActivityName,
+            resolveSavedPlace: { _ in
+                ResolvedItineraryPlace(
+                    name: "Louvre Museum",
+                    category: .sights,
+                    latitude: 48.8606,
+                    longitude: 2.3376
+                )
+            }
+        )
+
+        _ = try coordinator.saveActivityIfNeeded("Visit the Louvre Museum")
+
+        let savedPlaces = try fetchSavedPlaces(in: modelContext)
+        XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Paris" }.count, 1)
+        XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Barcelona" }.count, 1)
+    }
+
+    @MainActor
+    func testSavedPlaceServiceAvoidsDuplicateSaveWithinDestination() throws {
+        let container = try makeInMemoryContainer()
+        let modelContext = ModelContext(container)
+
+        let firstSave = try SavedPlaceService.savePlaceIfNeeded(
+            name: "Cafe de Flore",
+            category: .cafes,
+            source: SavedPlace.Source.poi.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8546,
+            longitude: 2.3339,
+            in: modelContext
+        )
+        let duplicateSave = try SavedPlaceService.savePlaceIfNeeded(
+            name: "  cafe   de flore ",
+            category: .cafes,
+            source: SavedPlace.Source.poi.rawValue,
+            destinationName: "Paris",
+            latitude: 48.8546,
+            longitude: 2.3339,
+            in: modelContext
+        )
+        let otherDestinationSave = try SavedPlaceService.savePlaceIfNeeded(
+            name: "Cafe de Flore",
+            category: .cafes,
+            source: SavedPlace.Source.poi.rawValue,
+            destinationName: "Rome",
+            latitude: 41.9028,
+            longitude: 12.4964,
+            in: modelContext
+        )
+
+        let savedPlaces = try fetchSavedPlaces(in: modelContext)
+
+        XCTAssertNotNil(firstSave)
+        XCTAssertNil(duplicateSave)
+        XCTAssertNotNil(otherDestinationSave)
+        XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Paris" }.count, 1)
+        XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Rome" }.count, 1)
+    }
+
     @MainActor
     func testSeedImportIsIdempotentForBarcelonaAndParis() throws {
         let container = try makeInMemoryContainer()
@@ -61,7 +332,14 @@ final class CityScoutTests: XCTestCase {
 
     @MainActor
     private func makeInMemoryContainer() throws -> ModelContainer {
-        let schema = Schema([Trip.self, Situation.self, Phrase.self, SavedPhrase.self])
+        let schema = Schema([
+            Trip.self,
+            Situation.self,
+            Phrase.self,
+            SavedPhrase.self,
+            SavedPlace.self,
+            SavedItinerary.self
+        ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [configuration])
     }
@@ -96,5 +374,10 @@ final class CityScoutTests: XCTestCase {
             }
         )
         return try modelContext.fetch(descriptor)
+    }
+
+    @MainActor
+    private func fetchSavedPlaces(in modelContext: ModelContext) throws -> [SavedPlace] {
+        try modelContext.fetch(FetchDescriptor<SavedPlace>())
     }
 }

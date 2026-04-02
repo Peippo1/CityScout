@@ -31,14 +31,6 @@ class Settings:
             "OPENAI_API_KEY is missing. Set it in the environment or backend/.env before calling OpenAI."
         )
 
-    def require_app_shared_secret(self) -> str:
-        secret = _read_env("APP_SHARED_SECRET")
-        if secret:
-            return secret
-        raise RuntimeError(
-            "APP_SHARED_SECRET is missing. Set it in the environment or backend/.env before calling /plan-itinerary."
-        )
-
     def cors_origins(self) -> list[str]:
         origins: list[str] = []
         if self.app_env() in {"development", "test"}:

@@ -1,13 +1,26 @@
 import SwiftUI
+import SwiftData
 
 struct ExploreHomeView: View {
     let destinationName: String
+
+    @Query private var savedPlaces: [SavedPlace]
 
     @State private var selectedCategory: POICategory? = nil
 
     private let columns = [
         GridItem(.adaptive(minimum: 160), spacing: 12)
     ]
+
+    init(destinationName: String) {
+        self.destinationName = destinationName
+        _savedPlaces = Query(
+            filter: #Predicate { place in
+                place.destinationName == destinationName
+            },
+            sort: [SortDescriptor(\SavedPlace.createdAt, order: .reverse)]
+        )
+    }
 
     private var destinationPOIs: [PointOfInterest] {
         PointOfInterest.pois(in: destinationName)
@@ -22,6 +35,14 @@ struct ExploreHomeView: View {
         let picks = destinationPOIs.filter(\.isTopPick)
         guard let selectedCategory else { return picks }
         return picks.filter { $0.category == selectedCategory }
+    }
+
+    private func isSaved(_ poi: PointOfInterest) -> Bool {
+        SavedPlaceService.isPlaceSaved(
+            name: poi.name,
+            destinationName: destinationName,
+            in: savedPlaces
+        )
     }
 
     var body: some View {
@@ -62,7 +83,7 @@ struct ExploreHomeView: View {
                                 NavigationLink {
                                     POIDetailView(poi: poi, destinationName: destinationName)
                                 } label: {
-                                    POITileView(poi: poi)
+                                    POITileView(poi: poi, isSaved: isSaved(poi))
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityElement(children: .ignore)
@@ -144,7 +165,7 @@ struct ExploreHomeView: View {
                         NavigationLink {
                             POIDetailView(poi: poi, destinationName: destinationName)
                         } label: {
-                            TopPickCardView(poi: poi)
+                            TopPickCardView(poi: poi, isSaved: isSaved(poi))
                         }
                         .buttonStyle(.plain)
                         .accessibilityElement(children: .ignore)
@@ -160,13 +181,27 @@ struct ExploreHomeView: View {
 
 private struct POITileView: View {
     let poi: PointOfInterest
+    let isSaved: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: poi.symbolName)
-                .font(.title2)
-                .foregroundStyle(Color.accentColor)
-                .accessibilityHidden(true)
+            HStack(alignment: .top) {
+                Image(systemName: poi.symbolName)
+                    .font(.title2)
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityHidden(true)
+
+                Spacer(minLength: 8)
+
+                if isSaved {
+                    Label("Saved", systemImage: "bookmark.fill")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.brandSage.opacity(0.2), in: Capsule(style: .continuous))
+                        .foregroundStyle(Color.brandGreenDark)
+                }
+            }
 
             Text(poi.name)
                 .font(.headline)
@@ -196,13 +231,26 @@ private struct POITileView: View {
 
 private struct TopPickCardView: View {
     let poi: PointOfInterest
+    let isSaved: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: poi.symbolName)
-                .font(.title3)
-                .foregroundStyle(Color.accentColor)
-                .accessibilityHidden(true)
+            HStack(alignment: .top) {
+                Image(systemName: poi.symbolName)
+                    .font(.title3)
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityHidden(true)
+
+                Spacer(minLength: 8)
+
+                if isSaved {
+                    Image(systemName: "bookmark.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.brandGreenDark)
+                        .padding(8)
+                        .background(Color.brandSage.opacity(0.18), in: Circle())
+                }
+            }
 
             Text(poi.name)
                 .font(.headline)

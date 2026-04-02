@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import MapKit
 
 private enum SearchScopeFilter: String, CaseIterable, Identifiable {
     case all
@@ -24,6 +23,7 @@ private enum SearchScopeFilter: String, CaseIterable, Identifiable {
 struct SearchHomeView: View {
     let destinationName: String
 
+    @Environment(\.modelContext) private var modelContext
     @Query private var savedPlaces: [SavedPlace]
 
     @State private var searchText = ""
@@ -75,6 +75,14 @@ struct SearchHomeView: View {
         selectedScope == .all || selectedScope == .saved
     }
 
+    private func isSaved(_ poi: PointOfInterest) -> Bool {
+        SavedPlaceService.isPlaceSaved(
+            name: poi.name,
+            destinationName: destinationName,
+            in: savedPlaces
+        )
+    }
+
     private var hasResults: Bool {
         (shouldShowPOIs && filteredPOIs.isEmpty == false)
             || (shouldShowSavedPlaces && filteredSavedPlaces.isEmpty == false)
@@ -91,14 +99,32 @@ struct SearchHomeView: View {
                     if shouldShowPOIs, filteredPOIs.isEmpty == false {
                         Section("Points of Interest") {
                             ForEach(filteredPOIs) { poi in
-                                NavigationLink {
-                                    POIDetailView(poi: poi, destinationName: destinationName)
-                                } label: {
-                                    SearchResultRow(
-                                        icon: poi.symbolName,
-                                        title: poi.name,
-                                        subtitle: poi.category.displayName
-                                    )
+                                HStack(alignment: .top, spacing: 12) {
+                                    NavigationLink {
+                                        POIDetailView(poi: poi, destinationName: destinationName)
+                                    } label: {
+                                        SearchResultRow(
+                                            icon: poi.symbolName,
+                                            title: poi.name,
+                                            subtitle: poi.category.displayName,
+                                            savedStateText: isSaved(poi) ? "Saved" : nil
+                                        )
+                                    }
+
+                                    Spacer(minLength: 8)
+
+                                    Button {
+                                        savePOI(poi)
+                                    } label: {
+                                        Image(systemName: isSaved(poi) ? "bookmark.fill" : "bookmark")
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(isSaved(poi) ? Color.brandGreenDark : .secondary)
+                                            .frame(width: 32, height: 32)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(isSaved(poi))
+                                    .accessibilityLabel(isSaved(poi) ? "\(poi.name) already saved" : "Save \(poi.name)")
+                                    .accessibilityHint("Adds this point of interest to your saved places.")
                                 }
                                 .accessibilityElement(children: .combine)
                                 .accessibilityLabel("\(poi.name), \(poi.category.displayName), \(destinationName)")
@@ -133,7 +159,7 @@ struct SearchHomeView: View {
         .navigationTitle("\(destinationName) Search")
         .searchable(text: $searchText, prompt: "Search places and saved spots")
         .sheet(item: $selectedSavedPlace) { place in
-            SavedPlaceSearchDetailView(place: place)
+            SavedPlaceDetailView(place: place)
         }
         .safeAreaInset(edge: .top) {
             VStack(alignment: .leading, spacing: 16) {
@@ -155,6 +181,22 @@ struct SearchHomeView: View {
         }
     }
 
+    private func savePOI(_ poi: PointOfInterest) {
+        do {
+            _ = try SavedPlaceService.savePlaceIfNeeded(
+                name: poi.name,
+                category: poi.category,
+                source: SavedPlace.Source.poi.rawValue,
+                destinationName: destinationName,
+                latitude: poi.latitude,
+                longitude: poi.longitude,
+                in: modelContext
+            )
+        } catch {
+            assertionFailure("Failed to save point of interest: \(error.localizedDescription)")
+        }
+    }
+
     private var promptView: some View {
         ContentUnavailableView(
             "Search",
@@ -169,6 +211,7 @@ private struct SearchResultRow: View {
     let icon: String
     let title: String
     let subtitle: String
+    var savedStateText: String? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -187,67 +230,18 @@ private struct SearchResultRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
+
+                if let savedStateText {
+                    Text(savedStateText)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.brandSage.opacity(0.18), in: Capsule(style: .continuous))
+                        .foregroundStyle(Color.brandGreenDark)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct SavedPlaceSearchDetailView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let place: SavedPlace
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section("Place") {
-                    Text(place.name)
-                        .font(.title3)
-                }
-
-                Section("Context") {
-                    Text(place.destinationName)
-                    Text(place.category?.displayName ?? "Saved place")
-                }
-
-                Section("Coordinates") {
-                    Text("\(place.latitude.formatted(.number.precision(.fractionLength(4)))), \(place.longitude.formatted(.number.precision(.fractionLength(4))))")
-                }
-
-                Section("Saved") {
-                    Text(place.createdAt, format: Date.FormatStyle(date: .abbreviated, time: .shortened))
-                }
-
-                Section {
-                    Button("Open in Maps") {
-                        openInMaps()
-                    }
-                    .accessibilityLabel("Open \(place.name) in Maps")
-                    .accessibilityHint("Opens Apple Maps for this saved place.")
-                }
-            }
-            .navigationTitle(place.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                    .accessibilityLabel("Close saved place details")
-                }
-            }
-        }
-    }
-
-    private func openInMaps() {
-        // TODO: update deprecated MKPlacemark API for newer iOS SDK
-        let placemark = MKPlacemark(
-            coordinate: CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude)
-        )
-        let mapItem = MKMapItem(placemark: placemark)
-        mapItem.name = place.name
-        mapItem.openInMaps()
     }
 }
 
