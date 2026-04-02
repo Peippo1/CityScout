@@ -137,6 +137,98 @@ final class CityScoutTests: XCTestCase {
         XCTAssertEqual(requestNames, ["Cafe de Flore", "Louvre   Museum"])
     }
 
+    func testBuildItineraryFromSavedPlacesUsesTimeAwareCategoryHeuristics() {
+        let savedPlaces = [
+            SavedPlace(
+                name: "Late Dinner Spot",
+                category: .food,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.86,
+                longitude: 2.35,
+                createdAt: Date(timeIntervalSince1970: 400)
+            ),
+            SavedPlace(
+                name: "Canal Cafe",
+                category: .cafes,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.87,
+                longitude: 2.36,
+                createdAt: Date(timeIntervalSince1970: 300)
+            ),
+            SavedPlace(
+                name: "Louvre Museum",
+                category: .sights,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8606,
+                longitude: 2.3376,
+                createdAt: Date(timeIntervalSince1970: 200)
+            ),
+            SavedPlace(
+                name: "Night Bar",
+                category: .nightlife,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.85,
+                longitude: 2.34,
+                createdAt: Date(timeIntervalSince1970: 100)
+            )
+        ]
+
+        let itinerary = PlanSavedPlaceSupport.buildItineraryFromSavedPlaces(
+            destinationName: "Paris",
+            savedPlaces: savedPlaces
+        )
+
+        XCTAssertEqual(itinerary?.morning.activities, ["Canal Cafe"])
+        XCTAssertEqual(itinerary?.afternoon.activities, ["Louvre Museum", "Night Bar"])
+        XCTAssertEqual(itinerary?.evening.activities, ["Late Dinner Spot"])
+        XCTAssertTrue(itinerary?.notes.first?.contains("Built locally from your saved places") == true)
+    }
+
+    func testBuildItineraryFromSavedPlacesDeduplicatesByNewestSavedPlaceName() {
+        let savedPlaces = [
+            SavedPlace(
+                name: "Old Louvre",
+                category: .sights,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8606,
+                longitude: 2.3376,
+                createdAt: Date(timeIntervalSince1970: 100)
+            ),
+            SavedPlace(
+                name: "  old   louvre  ",
+                category: .sights,
+                source: SavedPlace.Source.poi.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8606,
+                longitude: 2.3376,
+                createdAt: Date(timeIntervalSince1970: 300)
+            ),
+            SavedPlace(
+                name: "Morning Coffee",
+                category: .cafes,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8546,
+                longitude: 2.3339,
+                createdAt: Date(timeIntervalSince1970: 200)
+            )
+        ]
+
+        let itinerary = PlanSavedPlaceSupport.buildItineraryFromSavedPlaces(
+            destinationName: "Paris",
+            savedPlaces: savedPlaces
+        )
+
+        XCTAssertEqual(itinerary?.morning.activities, ["Morning Coffee"])
+        XCTAssertEqual(itinerary?.afternoon.activities, [])
+        XCTAssertEqual(itinerary?.evening.activities, ["  old   louvre  "])
+    }
+
     func testItinerarySignatureChangesWhenNotesChange() {
         let baseItinerary = PlanAPIService.ItineraryResponse(
             destination: "Paris",

@@ -88,6 +88,12 @@ private enum PlanActivitySaveStatus {
 }
 
 enum PlanSavedPlaceSupport {
+    private enum DaySection {
+        case morning
+        case afternoon
+        case evening
+    }
+
     static func normalizedActivityName(_ activity: String) -> String {
         let collapsedWhitespace = activity
             .components(separatedBy: .whitespacesAndNewlines)
@@ -173,6 +179,130 @@ enum PlanSavedPlaceSupport {
             itinerary.notes.joined(separator: "|")
         ]
         .joined(separator: "||")
+    }
+
+    static func buildItineraryFromSavedPlaces(
+        destinationName: String,
+        savedPlaces: [SavedPlace]
+    ) -> PlanAPIService.ItineraryResponse? {
+        let uniquePlaces = orderedUniqueSavedPlaces(
+            from: savedPlaces.filter { $0.destinationName == destinationName }
+        )
+        guard uniquePlaces.isEmpty == false else { return nil }
+
+        var remainingPlaces = uniquePlaces
+        let morningActivities = takeActivities(
+            from: &remainingPlaces,
+            preferredCategories: [.cafes, .sights],
+            limit: sectionLimit(for: uniquePlaces.count, section: .morning)
+        )
+        let eveningActivities = takeActivities(
+            from: &remainingPlaces,
+            preferredCategories: [.food, .nightlife, .shopping],
+            limit: sectionLimit(for: uniquePlaces.count, section: .evening)
+        )
+        let afternoonActivities = takeActivities(
+            from: &remainingPlaces,
+            preferredCategories: [.sights, .shopping, .cafes],
+            limit: sectionLimit(for: uniquePlaces.count, section: .afternoon)
+        )
+
+        let notes = buildFromSavedPlacesNotes(
+            totalPlaceCount: uniquePlaces.count,
+            representedSections: [
+                morningActivities.isEmpty == false,
+                afternoonActivities.isEmpty == false,
+                eveningActivities.isEmpty == false
+            ]
+        )
+
+        return PlanAPIService.ItineraryResponse(
+            destination: destinationName,
+            morning: .init(title: "Morning", activities: morningActivities),
+            afternoon: .init(title: "Afternoon", activities: afternoonActivities),
+            evening: .init(title: "Evening", activities: eveningActivities),
+            notes: notes
+        )
+    }
+
+    private static func orderedUniqueSavedPlaces(from savedPlaces: [SavedPlace]) -> [SavedPlace] {
+        var seenNames: Set<String> = []
+        var orderedPlaces: [SavedPlace] = []
+
+        for place in savedPlaces.sorted(by: { $0.createdAt > $1.createdAt }) {
+            let normalizedName = normalizedActivityName(place.name)
+            guard normalizedName.isEmpty == false else { continue }
+            guard seenNames.insert(normalizedName).inserted else { continue }
+            orderedPlaces.append(place)
+        }
+
+        return orderedPlaces
+    }
+
+    private static func sectionLimit(for totalPlaceCount: Int, section: DaySection) -> Int {
+        switch totalPlaceCount {
+        case 0:
+            return 0
+        case 1:
+            return section == .morning ? 1 : 0
+        case 2:
+            return section == .afternoon ? 0 : 1
+        case 3:
+            return 1
+        case 4:
+            return section == .afternoon ? 2 : 1
+        default:
+            return 2
+        }
+    }
+
+    private static func takeActivities(
+        from places: inout [SavedPlace],
+        preferredCategories: [POICategory],
+        limit: Int
+    ) -> [String] {
+        guard limit > 0, places.isEmpty == false else { return [] }
+
+        var selectedNames: [String] = []
+        let preferredSet = Set(preferredCategories)
+        var matchedIndices: [Int] = []
+
+        for index in places.indices where matchedIndices.count < limit {
+            let place = places[index]
+            guard let category = place.category, preferredSet.contains(category) else { continue }
+            matchedIndices.append(index)
+            selectedNames.append(place.name)
+        }
+
+        for index in matchedIndices.reversed() {
+            places.remove(at: index)
+        }
+
+        while selectedNames.count < limit, places.isEmpty == false {
+            selectedNames.append(places.removeFirst().name)
+        }
+
+        return selectedNames
+    }
+
+    private static func buildFromSavedPlacesNotes(
+        totalPlaceCount: Int,
+        representedSections: [Bool]
+    ) -> [String] {
+        var notes = [
+            "Built locally from your saved places, so this day works even if the planner backend is unavailable.",
+            "Morning prioritises cafés and sights, afternoon leans toward sights and shopping, and evening favours food and nightlife."
+        ]
+
+        if representedSections.filter({ $0 }).count < 3 {
+            notes.append(
+                totalPlaceCount == 1
+                ? "Save a few more places to fill out the rest of your day."
+                : "Save more places to round out the quieter parts of the day."
+            )
+        }
+
+        return notes
     }
 }
 
@@ -510,6 +640,30 @@ private final class PlanHomeViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func buildFromSavedPlaces(
+        destinationName: String,
+        savedPlaces: [SavedPlace]
+    ) {
+        guard let nextItinerary = PlanSavedPlaceSupport.buildItineraryFromSavedPlaces(
+            destinationName: destinationName,
+            savedPlaces: savedPlaces
+        ) else {
+            errorMessage = "Save a few places first, then CityScout can build a local day plan for you."
+            return
+        }
+
+        prompt = ""
+        selectedPreferences = []
+        errorMessage = nil
+        persistedItinerarySignature = nil
+
+        withAnimation(.easeInOut(duration: 0.25)) {
+            itinerary = nextItinerary
+        }
+
+        showFeedback("Built a local plan from saved places", symbol: "sparkles")
     }
 
     func loadSavedItinerary(_ savedItinerary: SavedItinerary, signature: String) {
@@ -970,6 +1124,7 @@ struct PlanHomeView: View {
     let destinationName: String
 
     @Environment(\.modelContext) private var modelContext
+    @Query private var savedPlaces: [SavedPlace]
     @Query private var savedItineraries: [SavedItinerary]
     @StateObject private var viewModel = PlanHomeViewModel()
     @State private var selectedSavedItineraryForReview: SavedItinerary?
@@ -980,6 +1135,12 @@ struct PlanHomeView: View {
 
     init(destinationName: String) {
         self.destinationName = destinationName
+        _savedPlaces = Query(
+            filter: #Predicate { place in
+                place.destinationName == destinationName
+            },
+            sort: [SortDescriptor(\SavedPlace.createdAt, order: .reverse)]
+        )
         _savedItineraries = Query(
             filter: #Predicate { itinerary in
                 itinerary.destinationName == destinationName
@@ -1204,6 +1365,24 @@ struct PlanHomeView: View {
 
     private var actionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if savedPlaces.isEmpty == false {
+                Button {
+                    viewModel.buildFromSavedPlaces(
+                        destinationName: destinationName,
+                        savedPlaces: savedPlaces
+                    )
+                } label: {
+                    Label("Build From Saved Places", systemImage: "map.fill")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.brandPink)
+                .disabled(viewModel.isLoading)
+                .accessibilityLabel("Build itinerary from saved places")
+                .accessibilityHint("Creates an offline day plan using saved places for this destination.")
+            }
+
             Button {
                 Task {
                     await viewModel.generateItinerary(
@@ -1264,6 +1443,13 @@ struct PlanHomeView: View {
             }
 
             plannerResilienceHint
+
+            if savedPlaces.isEmpty {
+                Text("Save a few places from Explore or Search to build an offline plan here.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.horizontal)
     }
