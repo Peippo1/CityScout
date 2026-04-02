@@ -169,6 +169,33 @@ final class CityScoutTests: XCTestCase {
         XCTAssertNotEqual(baseSignature, changedSignature)
     }
 
+    func testItinerarySignatureChangesWhenCustomTitleChanges() {
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Coffee"]),
+            afternoon: .init(title: "Afternoon", activities: ["Museum"]),
+            evening: .init(title: "Evening", activities: ["Dinner"]),
+            notes: []
+        )
+
+        let untitledSignature = PlanSavedPlaceSupport.itinerarySignature(
+            destinationName: "Paris",
+            customTitle: "",
+            prompt: "Plan me a day",
+            selectedPreferenceRawValues: ["relaxed"],
+            itinerary: itinerary
+        )
+        let titledSignature = PlanSavedPlaceSupport.itinerarySignature(
+            destinationName: "Paris",
+            customTitle: "Rainy Day Plan",
+            prompt: "Plan me a day",
+            selectedPreferenceRawValues: ["relaxed"],
+            itinerary: itinerary
+        )
+
+        XCTAssertNotEqual(untitledSignature, titledSignature)
+    }
+
     func testItineraryPlaceMatcherMatchesDistinctiveSingleTokenPlace() {
         let poi = ItineraryPlaceMatcher.match(
             destinationName: "Paris",
@@ -272,6 +299,43 @@ final class CityScoutTests: XCTestCase {
         XCTAssertNotNil(otherDestinationSave)
         XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Paris" }.count, 1)
         XCTAssertEqual(savedPlaces.filter { $0.destinationName == "Rome" }.count, 1)
+    }
+
+    @MainActor
+    func testPlanPersistenceCoordinatorDuplicateSavedItineraryCreatesCopyWithTitle() throws {
+        let container = try makeInMemoryContainer()
+        let modelContext = ModelContext(container)
+        let original = SavedItinerary(
+            destinationName: "Paris",
+            customTitle: "Museum Day",
+            prompt: "Art and coffee",
+            preferencesCSV: SavedItinerary.encodeCSV(["relaxed"]),
+            morningTitle: "Morning",
+            morningActivitiesCSV: SavedItinerary.encodeCSV(["Coffee"]),
+            afternoonTitle: "Afternoon",
+            afternoonActivitiesCSV: SavedItinerary.encodeCSV(["Louvre"]),
+            eveningTitle: "Evening",
+            eveningActivitiesCSV: SavedItinerary.encodeCSV(["Dinner"]),
+            notesCSV: SavedItinerary.encodeCSV(["Book ahead"])
+        )
+        modelContext.insert(original)
+        try modelContext.save()
+
+        let coordinator = PlanPersistenceCoordinator(
+            modelContext: modelContext,
+            destinationName: "Paris",
+            normalizeActivityName: PlanSavedPlaceSupport.normalizedActivityName,
+            resolveSavedPlace: { _ in
+                ResolvedItineraryPlace(name: "", category: nil, latitude: 0, longitude: 0)
+            }
+        )
+
+        let duplicate = try coordinator.duplicateSavedItinerary(original)
+        let savedItineraries = try modelContext.fetch(FetchDescriptor<SavedItinerary>())
+
+        XCTAssertEqual(savedItineraries.count, 2)
+        XCTAssertEqual(duplicate.customTitle, "Copy of Museum Day")
+        XCTAssertEqual(duplicate.prompt, original.prompt)
     }
 
     @MainActor

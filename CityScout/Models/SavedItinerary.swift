@@ -7,6 +7,7 @@ final class SavedItinerary {
 
     var destinationName: String
     var createdAt: Date
+    var customTitle: String
     var prompt: String
     var preferencesCSV: String
     var morningTitle: String
@@ -45,6 +46,7 @@ final class SavedItinerary {
     init(
         destinationName: String,
         createdAt: Date = Date(),
+        customTitle: String = "",
         prompt: String,
         preferencesCSV: String,
         morningTitle: String,
@@ -57,6 +59,7 @@ final class SavedItinerary {
     ) {
         self.destinationName = destinationName
         self.createdAt = createdAt
+        self.customTitle = customTitle
         self.prompt = prompt
         self.preferencesCSV = preferencesCSV
         self.morningTitle = morningTitle
@@ -66,6 +69,10 @@ final class SavedItinerary {
         self.eveningTitle = eveningTitle
         self.eveningActivitiesCSV = eveningActivitiesCSV
         self.notesCSV = notesCSV
+    }
+
+    var hasCustomTitle: Bool {
+        customTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
     }
 
     static func encodeCSV(_ values: [String]) -> String {
