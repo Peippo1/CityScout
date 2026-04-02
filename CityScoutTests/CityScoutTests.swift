@@ -3,6 +3,49 @@ import SwiftData
 @testable import CityScout
 
 final class CityScoutTests: XCTestCase {
+    func testPlannerConfigurationUsesUniversalBaseURLForHostedEnvironment() {
+        let configuration = AppEnvironment.resolvePlannerConfiguration(
+            infoDictionary: [
+                "CITYSCOUT_API_BASE_URL": "https://staging.cityscout.example",
+                "CITYSCOUT_SIMULATOR_API_BASE_URL": "http://127.0.0.1:8000",
+                "CITYSCOUT_DEVICE_API_BASE_URL": "http://192.168.1.10:8000",
+                "CITYSCOUT_APP_SHARED_SECRET": "beta-secret"
+            ],
+            environment: [:],
+            isSimulator: false,
+            isDebugBuild: false
+        )
+
+        XCTAssertEqual(configuration.baseURLString, "https://staging.cityscout.example")
+        XCTAssertEqual(configuration.baseURLSource, "CITYSCOUT_API_BASE_URL")
+        XCTAssertEqual(configuration.appSharedSecret, "beta-secret")
+    }
+
+    func testPlannerConfigurationFallsBackToSimulatorLocalhostOnlyInDebug() {
+        let configuration = AppEnvironment.resolvePlannerConfiguration(
+            infoDictionary: [:],
+            environment: [:],
+            isSimulator: true,
+            isDebugBuild: true
+        )
+
+        XCTAssertEqual(configuration.baseURLString, "http://127.0.0.1:8000")
+        XCTAssertEqual(configuration.baseURLSource, "simulator fallback")
+        XCTAssertTrue(configuration.appSharedSecret.isEmpty)
+    }
+
+    func testPlannerConfigurationRequiresExplicitDeviceURLOutsideSimulatorFallback() {
+        let configuration = AppEnvironment.resolvePlannerConfiguration(
+            infoDictionary: [:],
+            environment: [:],
+            isSimulator: false,
+            isDebugBuild: true
+        )
+
+        XCTAssertEqual(configuration.baseURLString, "")
+        XCTAssertEqual(configuration.baseURLSource, "unconfigured")
+    }
+
     func testOrderedUniqueActivityNamesPreservesFirstTrimmedValue() {
         let activities = [
             "  Louvre Museum  ",

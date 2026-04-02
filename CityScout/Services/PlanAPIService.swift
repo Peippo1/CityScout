@@ -68,8 +68,6 @@ struct PlanAPIService {
         }
     }
 
-    // The iOS Simulator can often use 127.0.0.1 when the backend runs on the same Mac.
-    // Real devices need a reachable host URL instead, such as a LAN IP, tunnel, or deployed backend.
     private let environment: AppEnvironment
     private let session: URLSession
 
@@ -82,8 +80,6 @@ struct PlanAPIService {
     }
 
     var baseURLString: String { environment.baseURLString }
-
-    // TODO: Keep backend selection aligned with the release channel before TestFlight distribution.
 
     func generateItinerary(
         destination: String,
@@ -112,7 +108,9 @@ struct PlanAPIService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(environment.appSharedSecret, forHTTPHeaderField: "X-CityScout-App-Secret")
+        if environment.appSharedSecret.isEmpty == false {
+            request.setValue(environment.appSharedSecret, forHTTPHeaderField: "X-CityScout-App-Secret")
+        }
         request.timeoutInterval = 20
 
         do {
@@ -132,7 +130,9 @@ struct PlanAPIService {
     }
 
     private func endpointURL() throws -> URL {
-        guard var components = URLComponents(string: environment.baseURLString) else {
+        let baseURLString = environment.baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard baseURLString.isEmpty == false,
+              var components = URLComponents(string: baseURLString) else {
             throw ServiceError.invalidBaseURL
         }
 
@@ -191,6 +191,7 @@ struct PlanAPIService {
     private func debugLog(_ message: String) {
         #if DEBUG
         print("PlanAPIService: \(message)")
+        print("PlanAPIService config: \(environment.debugPlannerSummary)")
         #endif
     }
 }
