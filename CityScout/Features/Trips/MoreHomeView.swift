@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct MoreHomeView: View {
@@ -5,8 +6,55 @@ struct MoreHomeView: View {
 
     let destinationName: String
 
+    @Query(sort: [SortDescriptor(\SavedPlace.createdAt, order: .reverse)])
+    private var savedPlaces: [SavedPlace]
+    @Query(sort: [SortDescriptor(\SavedPhrase.createdAt, order: .reverse)])
+    private var savedPhrases: [SavedPhrase]
+    @Query(sort: [SortDescriptor(\SavedItinerary.createdAt, order: .reverse)])
+    private var savedItineraries: [SavedItinerary]
+
+    private var destinationSavedPlaces: [SavedPlace] {
+        savedPlaces.filter { $0.destinationName == destinationName }
+    }
+
+    private var destinationSavedPhrases: [SavedPhrase] {
+        savedPhrases.filter { $0.destinationName == destinationName }
+    }
+
+    private var destinationSavedItineraries: [SavedItinerary] {
+        savedItineraries.filter { $0.destinationName == destinationName }
+    }
+
+    private var recentActivitySummary: String {
+        let recentEntries: [(date: Date, label: String)] =
+            destinationSavedPlaces.map { ($0.createdAt, "Saved place") }
+            + destinationSavedPhrases.map { ($0.createdAt, "Saved phrase") }
+            + destinationSavedItineraries.map { ($0.createdAt, "Saved itinerary") }
+
+        guard let latestEntry = recentEntries.max(by: { $0.date < $1.date }) else {
+            return "No saved activity yet"
+        }
+
+        return "\(latestEntry.label) • \(latestEntry.date.formatted(date: .abbreviated, time: .shortened))"
+    }
+
     var body: some View {
         List {
+            Section {
+                TripHubCard(
+                    destinationName: destinationName,
+                    savedPlacesCount: destinationSavedPlaces.count,
+                    savedPhrasesCount: destinationSavedPhrases.count,
+                    savedItinerariesCount: destinationSavedItineraries.count,
+                    recentActivitySummary: recentActivitySummary
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            } header: {
+                Text("Trip Hub")
+            }
+
             Section("Discover") {
                 NavigationLink {
                     LessonsHomeView(destinationName: destinationName)
@@ -50,6 +98,19 @@ struct MoreHomeView: View {
 
             Section("Saved") {
                 NavigationLink {
+                    TodayHomeView(destinationName: destinationName)
+                } label: {
+                    MoreRow(
+                        title: "Today",
+                        subtitle: "Work through today’s saved plan",
+                        systemImage: "sun.max"
+                    )
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Today")
+                .accessibilityHint("Opens today mode for \(destinationName).")
+
+                NavigationLink {
                     PlanHomeView(destinationName: destinationName)
                 } label: {
                     MoreRow(
@@ -87,6 +148,57 @@ struct MoreHomeView: View {
                 .padding(.bottom, 4)
                 .background(.regularMaterial)
         }
+    }
+}
+
+private struct TripHubCard: View {
+    let destinationName: String
+    let savedPlacesCount: Int
+    let savedPhrasesCount: Int
+    let savedItinerariesCount: Int
+    let recentActivitySummary: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("\(destinationName) at a glance")
+                .font(.headline)
+
+            HStack(spacing: 12) {
+                hubStat(title: "Places", value: savedPlacesCount, tint: .brandSage)
+                hubStat(title: "Phrases", value: savedPhrasesCount, tint: .brandPink)
+                hubStat(title: "Plans", value: savedItinerariesCount, tint: .brandGreenDark)
+            }
+
+            Label(recentActivitySummary, systemImage: "clock")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.brandSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.brandSage.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private func hubStat(title: String, value: Int, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value.formatted())
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(tint)
+
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

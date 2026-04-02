@@ -172,12 +172,22 @@ struct MapHomeView: View {
         savedPlaces.filter(\.isItineraryDerived)
     }
 
+    private var orderedItineraryPlaces: [SavedPlace] {
+        itineraryPlaces.sorted { lhs, rhs in
+            if lhs.createdAt == rhs.createdAt {
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+
+            return lhs.createdAt < rhs.createdAt
+        }
+    }
+
     private var mappableFilteredSavedPlaces: [SavedPlace] {
         filteredSavedPlaces.filter(\.hasUsableMapCoordinate)
     }
 
     private var validItineraryRoutePlaces: [SavedPlace] {
-        itineraryPlaces.filter(\.hasUsableMapCoordinate)
+        orderedItineraryPlaces.filter(\.hasUsableMapCoordinate)
     }
 
     private var itineraryRouteCoordinates: [CLLocationCoordinate2D] {
@@ -202,6 +212,25 @@ struct MapHomeView: View {
         return unmatchedItineraryPlaces.count == 1
         ? "Route and centering use matched stops. 1 itinerary place is still generic."
         : "Route and centering use matched stops. \(unmatchedItineraryPlaces.count) itinerary places are still generic."
+    }
+
+    private var unmappedItineraryNamesPreview: String? {
+        guard filterMode == .itinerary, unmatchedItineraryPlaces.isEmpty == false else {
+            return nil
+        }
+
+        let previewNames = unmatchedItineraryPlaces
+            .map(\.name)
+            .prefix(3)
+            .joined(separator: ", ")
+
+        guard previewNames.isEmpty == false else { return nil }
+
+        if unmatchedItineraryPlaces.count > 3 {
+            return "\(previewNames), and \(unmatchedItineraryPlaces.count - 3) more still need map coordinates."
+        }
+
+        return "\(previewNames) still need map coordinates."
     }
 
     private var shouldShowItineraryEmptyState: Bool {
@@ -307,7 +336,24 @@ struct MapHomeView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    if let unmappedItineraryNamesPreview {
+                        Text(unmappedItineraryNamesPreview)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     HStack(spacing: 10) {
+                        if itineraryPlaces.isEmpty == false {
+                            Button("Today's Stops") {
+                                focusOnItineraryStops()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.brandGreenDark)
+                            .accessibilityLabel("Focus on today's stops")
+                            .accessibilityHint("Shows itinerary stops for \(destinationName) and centers the map on them.")
+                        }
+
                         Button("My Location") {
                             centerOnUserLocation()
                         }
@@ -489,6 +535,16 @@ struct MapHomeView: View {
                         .background(.thinMaterial, in: Circle())
                         .offset(x: ringDiameter / 3.2, y: -ringDiameter / 3.2)
                 }
+
+                if let stopNumber = itineraryStopNumber(for: place) {
+                    Text("\(stopNumber)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(.thinMaterial, in: Capsule(style: .continuous))
+                        .offset(y: ringDiameter / 2.1)
+                }
             }
             .scaleEffect(isItineraryFocusMode ? 1.16 : (isSelected ? 1.12 : 1.0))
             .opacity(place.isUnmatchedItineraryPlace ? 0.78 : 1)
@@ -533,6 +589,12 @@ struct MapHomeView: View {
                     Label(itineraryStatusText, systemImage: place.isMappedItineraryPlace ? "checkmark.circle.fill" : "questionmark.circle.fill")
                         .font(.footnote)
                         .foregroundStyle(place.isMappedItineraryPlace ? Color.brandGreenDark : .orange)
+                }
+
+                if let stopNumber = itineraryStopNumber(for: place) {
+                    Label("Stop \(stopNumber) of \(validItineraryRoutePlaces.count)", systemImage: "number.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 Label("Coordinates: \(formattedCoordinates(for: place))", systemImage: "location")
@@ -682,6 +744,14 @@ struct MapHomeView: View {
         return nil
     }
 
+    private func itineraryStopNumber(for place: SavedPlace) -> Int? {
+        guard let index = validItineraryRoutePlaces.firstIndex(where: { $0.id == place.id }) else {
+            return nil
+        }
+
+        return index + 1
+    }
+
     private func categoryStyle(for category: POICategory?) -> SavedPlaceCategoryStyle {
         switch category {
         case .food:
@@ -794,6 +864,12 @@ struct MapHomeView: View {
         }
 
         centerOnDestination()
+    }
+
+    private func focusOnItineraryStops() {
+        filterMode = .itinerary
+        isShowingRoute = true
+        centerOnBestAvailableContent()
     }
 
     private func centerOnUserLocation() {

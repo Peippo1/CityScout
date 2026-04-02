@@ -137,6 +137,208 @@ final class CityScoutTests: XCTestCase {
         XCTAssertEqual(requestNames, ["Cafe de Flore", "Louvre   Museum"])
     }
 
+    func testBuildItineraryFromSavedPlacesUsesTimeAwareCategoryHeuristics() {
+        let planner = LocalPlanner()
+        let savedPlaces = [
+            SavedPlace(
+                name: "Late Dinner Spot",
+                category: .food,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.86,
+                longitude: 2.35,
+                createdAt: Date(timeIntervalSince1970: 400)
+            ),
+            SavedPlace(
+                name: "Canal Cafe",
+                category: .cafes,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.87,
+                longitude: 2.36,
+                createdAt: Date(timeIntervalSince1970: 300)
+            ),
+            SavedPlace(
+                name: "Louvre Museum",
+                category: .sights,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8606,
+                longitude: 2.3376,
+                createdAt: Date(timeIntervalSince1970: 200)
+            ),
+            SavedPlace(
+                name: "Night Bar",
+                category: .nightlife,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.85,
+                longitude: 2.34,
+                createdAt: Date(timeIntervalSince1970: 100)
+            )
+        ]
+
+        let itinerary = planner.buildFromSaved(
+            context: PlanningContext(
+                destinationName: "Paris",
+                savedPlaces: savedPlaces,
+                mode: .buildFromSaved
+            )
+        )
+
+        XCTAssertEqual(itinerary?.morning.items.map(\.title), ["Canal Cafe"])
+        XCTAssertEqual(itinerary?.afternoon.items.map(\.title), ["Louvre Museum", "Night Bar"])
+        XCTAssertEqual(itinerary?.evening.items.map(\.title), ["Late Dinner Spot"])
+        XCTAssertTrue(itinerary?.notes.first?.contains("Built locally from your saved places") == true)
+    }
+
+    func testBuildItineraryFromSavedPlacesDeduplicatesByNewestSavedPlaceName() {
+        let planner = LocalPlanner()
+        let savedPlaces = [
+            SavedPlace(
+                name: "Old Louvre",
+                category: .sights,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8606,
+                longitude: 2.3376,
+                createdAt: Date(timeIntervalSince1970: 100)
+            ),
+            SavedPlace(
+                name: "  old   louvre  ",
+                category: .sights,
+                source: SavedPlace.Source.poi.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8606,
+                longitude: 2.3376,
+                createdAt: Date(timeIntervalSince1970: 300)
+            ),
+            SavedPlace(
+                name: "Morning Coffee",
+                category: .cafes,
+                source: SavedPlace.Source.manual.rawValue,
+                destinationName: "Paris",
+                latitude: 48.8546,
+                longitude: 2.3339,
+                createdAt: Date(timeIntervalSince1970: 200)
+            )
+        ]
+
+        let itinerary = planner.buildFromSaved(
+            context: PlanningContext(
+                destinationName: "Paris",
+                savedPlaces: savedPlaces,
+                mode: .buildFromSaved
+            )
+        )
+
+        XCTAssertEqual(itinerary?.morning.items.map(\.title), ["Morning Coffee"])
+        XCTAssertEqual(itinerary?.afternoon.items.map(\.title), [])
+        XCTAssertEqual(itinerary?.evening.items.map(\.title), ["old   louvre"])
+    }
+
+    func testOptimizeItineraryBalancesTimeOfDayCategories() {
+        let planner = LocalPlanner()
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Wine Bar", "Bakery"]),
+            afternoon: .init(title: "Afternoon", activities: ["Department Store"]),
+            evening: .init(title: "Evening", activities: ["Museum Visit"]),
+            notes: []
+        )
+
+        let optimized = planner.optimizeExisting(
+            context: PlanningContext(
+                destinationName: "Paris",
+                existingItinerary: itinerary,
+                mode: .optimizeExisting
+            ),
+            resolveSavedPlace: { activity in
+                switch activity {
+                case "Bakery":
+                    return ResolvedItineraryPlace(name: activity, category: .cafes, latitude: 48.85, longitude: 2.33)
+                case "Museum Visit":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.86, longitude: 2.34)
+                case "Department Store":
+                    return ResolvedItineraryPlace(name: activity, category: .shopping, latitude: 48.87, longitude: 2.35)
+                case "Wine Bar":
+                    return ResolvedItineraryPlace(name: activity, category: .nightlife, latitude: 48.88, longitude: 2.36)
+                default:
+                    return ResolvedItineraryPlace(name: activity, category: nil, latitude: 0, longitude: 0)
+                }
+            }
+        )
+
+        XCTAssertEqual(optimized?.morning.items.map(\.title), ["Bakery", "Museum Visit"])
+        XCTAssertEqual(optimized?.afternoon.items.map(\.title), ["Department Store"])
+        XCTAssertEqual(optimized?.evening.items.map(\.title), ["Wine Bar"])
+        XCTAssertTrue(optimized?.notes.first?.contains("Optimised locally") == true)
+    }
+
+    func testOptimizeItineraryKeepsNearbyMappedStopsTogether() {
+        let planner = LocalPlanner()
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: []),
+            afternoon: .init(title: "Afternoon", activities: ["Arc", "Louvre", "Montmartre"]),
+            evening: .init(title: "Evening", activities: []),
+            notes: []
+        )
+
+        let optimized = planner.optimizeExisting(
+            context: PlanningContext(
+                destinationName: "Paris",
+                existingItinerary: itinerary,
+                mode: .optimizeExisting
+            ),
+            resolveSavedPlace: { activity in
+                switch activity {
+                case "Arc":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.8738, longitude: 2.2950)
+                case "Louvre":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.8606, longitude: 2.3376)
+                case "Montmartre":
+                    return ResolvedItineraryPlace(name: activity, category: .sights, latitude: 48.8867, longitude: 2.3431)
+                default:
+                    return ResolvedItineraryPlace(name: activity, category: nil, latitude: 0, longitude: 0)
+                }
+            }
+        )
+
+        XCTAssertEqual(optimized?.afternoon.items.map(\.title), ["Arc", "Louvre", "Montmartre"])
+    }
+
+    func testAnnotateItineraryAddsSourceMappingAndConfidenceMetadata() {
+        let planner = LocalPlanner()
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Louvre Museum"]),
+            afternoon: .init(title: "Afternoon", activities: []),
+            evening: .init(title: "Evening", activities: ["Mystery Dinner Spot"]),
+            notes: []
+        )
+
+        let annotated = planner.annotateItinerary(
+            itinerary,
+            context: PlanningContext(destinationName: "Paris", existingItinerary: itinerary, mode: .aiGenerate),
+            source: .aiGenerated,
+            resolveSavedPlace: { activity in
+                switch activity {
+                case "Louvre Museum":
+                    return ResolvedItineraryPlace(name: "Louvre Museum", category: .sights, latitude: 48.8606, longitude: 2.3376)
+                default:
+                    return ResolvedItineraryPlace(name: activity, category: .food, latitude: 0, longitude: 0)
+                }
+            }
+        )
+
+        XCTAssertEqual(annotated.morning.items.first?.source, .aiGenerated)
+        XCTAssertEqual(annotated.morning.items.first?.mappingStatus, .matchedPOI)
+        XCTAssertEqual(annotated.morning.items.first?.confidence, .high)
+        XCTAssertEqual(annotated.evening.items.first?.mappingStatus, .fallback)
+        XCTAssertEqual(annotated.evening.items.first?.confidence, .low)
+    }
+
     func testItinerarySignatureChangesWhenNotesChange() {
         let baseItinerary = PlanAPIService.ItineraryResponse(
             destination: "Paris",
@@ -169,6 +371,33 @@ final class CityScoutTests: XCTestCase {
         XCTAssertNotEqual(baseSignature, changedSignature)
     }
 
+    func testItinerarySignatureChangesWhenCustomTitleChanges() {
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Coffee"]),
+            afternoon: .init(title: "Afternoon", activities: ["Museum"]),
+            evening: .init(title: "Evening", activities: ["Dinner"]),
+            notes: []
+        )
+
+        let untitledSignature = PlanSavedPlaceSupport.itinerarySignature(
+            destinationName: "Paris",
+            customTitle: "",
+            prompt: "Plan me a day",
+            selectedPreferenceRawValues: ["relaxed"],
+            itinerary: itinerary
+        )
+        let titledSignature = PlanSavedPlaceSupport.itinerarySignature(
+            destinationName: "Paris",
+            customTitle: "Rainy Day Plan",
+            prompt: "Plan me a day",
+            selectedPreferenceRawValues: ["relaxed"],
+            itinerary: itinerary
+        )
+
+        XCTAssertNotEqual(untitledSignature, titledSignature)
+    }
+
     func testItineraryPlaceMatcherMatchesDistinctiveSingleTokenPlace() {
         let poi = ItineraryPlaceMatcher.match(
             destinationName: "Paris",
@@ -185,6 +414,22 @@ final class CityScoutTests: XCTestCase {
         )
 
         XCTAssertNil(poi)
+    }
+
+    func testTodayProgressStorePersistsSelectedItineraryAndActivityState() {
+        let itineraryID = UUID()
+        let destinationName = "Paris Test Destination"
+        let activityID = "Morning|0|Coffee"
+
+        TodayProgressStore.reset(itineraryID: itineraryID, destinationName: destinationName)
+
+        TodayProgressStore.setSelectedItineraryID(itineraryID, for: destinationName)
+        TodayProgressStore.setActivityState(.visited, for: activityID, itineraryID: itineraryID)
+
+        XCTAssertEqual(TodayProgressStore.selectedItineraryID(for: destinationName), itineraryID)
+        XCTAssertEqual(TodayProgressStore.activityState(for: activityID, itineraryID: itineraryID), .visited)
+
+        TodayProgressStore.reset(itineraryID: itineraryID, destinationName: destinationName)
     }
 
     @MainActor
@@ -275,6 +520,43 @@ final class CityScoutTests: XCTestCase {
     }
 
     @MainActor
+    func testPlanPersistenceCoordinatorDuplicateSavedItineraryCreatesCopyWithTitle() throws {
+        let container = try makeInMemoryContainer()
+        let modelContext = ModelContext(container)
+        let original = SavedItinerary(
+            destinationName: "Paris",
+            customTitle: "Museum Day",
+            prompt: "Art and coffee",
+            preferencesCSV: SavedItinerary.encodeCSV(["relaxed"]),
+            morningTitle: "Morning",
+            morningActivitiesCSV: SavedItinerary.encodeCSV(["Coffee"]),
+            afternoonTitle: "Afternoon",
+            afternoonActivitiesCSV: SavedItinerary.encodeCSV(["Louvre"]),
+            eveningTitle: "Evening",
+            eveningActivitiesCSV: SavedItinerary.encodeCSV(["Dinner"]),
+            notesCSV: SavedItinerary.encodeCSV(["Book ahead"])
+        )
+        modelContext.insert(original)
+        try modelContext.save()
+
+        let coordinator = PlanPersistenceCoordinator(
+            modelContext: modelContext,
+            destinationName: "Paris",
+            normalizeActivityName: PlanSavedPlaceSupport.normalizedActivityName,
+            resolveSavedPlace: { _ in
+                ResolvedItineraryPlace(name: "", category: nil, latitude: 0, longitude: 0)
+            }
+        )
+
+        let duplicate = try coordinator.duplicateSavedItinerary(original)
+        let savedItineraries = try modelContext.fetch(FetchDescriptor<SavedItinerary>())
+
+        XCTAssertEqual(savedItineraries.count, 2)
+        XCTAssertEqual(duplicate.customTitle, "Copy of Museum Day")
+        XCTAssertEqual(duplicate.prompt, original.prompt)
+    }
+
+    @MainActor
     func testSeedImportIsIdempotentForBarcelonaAndParis() throws {
         let container = try makeInMemoryContainer()
         let modelContext = ModelContext(container)
@@ -328,6 +610,198 @@ final class CityScoutTests: XCTestCase {
         XCTAssertEqual(secondPhraseCount, firstPhraseCount, "Phrase count should remain stable on re-import.")
         XCTAssertGreaterThan(firstSituationCount, 0, "Situations should be imported from seed content.")
         XCTAssertGreaterThan(firstPhraseCount, 0, "Phrases should be imported from seed content.")
+    }
+
+    func testPlannerScorerRewardsMappedMorningPreferenceFit() {
+        let candidate = PlanningCandidate(
+            id: "canal-cafe",
+            name: "Canal Cafe",
+            normalizedName: "canal cafe",
+            mappedPlaceName: "Canal Cafe",
+            category: .cafes,
+            destinationName: "Paris",
+            latitude: 48.87,
+            longitude: 2.36,
+            source: SavedPlace.Source.manual.rawValue,
+            timeOfDayTags: [.morning, .afternoon],
+            experienceTags: [.foodDrink, .relax],
+            isMapped: true
+        )
+
+        let score = PlannerScorer().score(
+            candidate: candidate,
+            for: .morning,
+            selectedCandidates: [],
+            context: PlanningContext(
+                destinationName: "Paris",
+                preferences: ["cafes"],
+                mode: .buildFromSaved
+            )
+        )
+
+        XCTAssertGreaterThanOrEqual(score.total, 7)
+        XCTAssertTrue(score.reasons.contains(.goodMorningFit))
+        XCTAssertTrue(score.reasons.contains(.matchesPreferences))
+        XCTAssertTrue(score.reasons.contains(.mappedPlace))
+    }
+
+    func testBuildFromSavedAddsExplanationMetadataToActivities() {
+        let planner = LocalPlanner()
+        let itinerary = planner.buildFromSaved(
+            context: PlanningContext(
+                destinationName: "Paris",
+                preferences: ["cafes"],
+                savedPlaces: [
+                    SavedPlace(
+                        name: "Canal Cafe",
+                        category: .cafes,
+                        source: SavedPlace.Source.manual.rawValue,
+                        destinationName: "Paris",
+                        latitude: 48.87,
+                        longitude: 2.36,
+                        createdAt: Date(timeIntervalSince1970: 100)
+                    )
+                ],
+                mode: .buildFromSaved
+            )
+        )
+
+        let morningActivity = itinerary?.morning.items.first
+
+        XCTAssertEqual(morningActivity?.source, .builtFromSaved)
+        XCTAssertEqual(morningActivity?.explanations.first, "Built from your saved places.")
+        XCTAssertTrue(morningActivity?.explanations.contains("Good fit for morning.") == true)
+        XCTAssertTrue(morningActivity?.explanations.contains("Matches your selected preferences.") == true)
+    }
+
+    func testOptimizeExistingPreservesStrongMappedStopWhenReplacementIsNotClearlyBetter() {
+        let planner = LocalPlanner()
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Louvre Museum"]),
+            afternoon: .init(title: "Afternoon", activities: []),
+            evening: .init(title: "Evening", activities: []),
+            notes: []
+        )
+
+        let optimized = planner.optimizeExisting(
+            context: PlanningContext(
+                destinationName: "Paris",
+                savedPlaces: [
+                    SavedPlace(
+                        name: "Musee d'Orsay",
+                        category: .sights,
+                        source: SavedPlace.Source.manual.rawValue,
+                        destinationName: "Paris",
+                        latitude: 48.86,
+                        longitude: 2.3266,
+                        createdAt: Date(timeIntervalSince1970: 200)
+                    )
+                ],
+                existingItinerary: itinerary,
+                mode: .optimizeExisting
+            ),
+            resolveSavedPlace: { activity in
+                switch activity {
+                case "Louvre Museum":
+                    return ResolvedItineraryPlace(
+                        name: "Louvre Museum",
+                        category: .sights,
+                        latitude: 48.8606,
+                        longitude: 2.3376
+                    )
+                default:
+                    return ResolvedItineraryPlace(name: activity, category: nil, latitude: 0, longitude: 0)
+                }
+            }
+        )
+
+        XCTAssertEqual(optimized?.morning.items.map(\.title), ["Louvre Museum"])
+    }
+
+    func testOptimizeExistingReplacesWeakFallbackWithClearlyBetterSavedPlace() {
+        let planner = LocalPlanner()
+        let itinerary = PlanAPIService.ItineraryResponse(
+            destination: "Paris",
+            morning: .init(title: "Morning", activities: ["Somewhere for coffee"]),
+            afternoon: .init(title: "Afternoon", activities: []),
+            evening: .init(title: "Evening", activities: []),
+            notes: []
+        )
+
+        let optimized = planner.optimizeExisting(
+            context: PlanningContext(
+                destinationName: "Paris",
+                preferences: ["cafes"],
+                savedPlaces: [
+                    SavedPlace(
+                        name: "Canal Cafe",
+                        category: .cafes,
+                        source: SavedPlace.Source.manual.rawValue,
+                        destinationName: "Paris",
+                        latitude: 48.87,
+                        longitude: 2.36,
+                        createdAt: Date(timeIntervalSince1970: 200)
+                    )
+                ],
+                existingItinerary: itinerary,
+                mode: .optimizeExisting
+            ),
+            resolveSavedPlace: { activity in
+                ResolvedItineraryPlace(name: activity, category: nil, latitude: 0, longitude: 0)
+            }
+        )
+
+        XCTAssertEqual(optimized?.morning.items.map(\.title), ["Canal Cafe"])
+    }
+
+    func testNarrativeBuilderReflectsRelaxedMappedDay() {
+        let itinerary = LocalPlannedItinerary(
+            destination: "Paris",
+            morning: PlannedSection(
+                title: "Morning",
+                items: [
+                    PlannedActivity(
+                        id: "canal-cafe",
+                        title: "Canal Cafe",
+                        mappedPlaceName: "Canal Cafe",
+                        mappingStatus: .matchedPOI,
+                        confidence: .high,
+                        latitude: 48.87,
+                        longitude: 2.36,
+                        source: .builtFromSaved,
+                        explanations: []
+                    )
+                ]
+            ),
+            afternoon: PlannedSection(
+                title: "Afternoon",
+                items: [
+                    PlannedActivity(
+                        id: "louvre",
+                        title: "Louvre Museum",
+                        mappedPlaceName: "Louvre Museum",
+                        mappingStatus: .matchedPOI,
+                        confidence: .high,
+                        latitude: 48.8606,
+                        longitude: 2.3376,
+                        source: .builtFromSaved,
+                        explanations: []
+                    )
+                ]
+            ),
+            evening: PlannedSection(title: "Evening", items: []),
+            notes: [],
+            narrative: nil
+        )
+
+        let narrative = PlanningNarrativeBuilder().narrative(
+            for: itinerary,
+            preferences: ["relaxed"]
+        )
+
+        XCTAssertTrue(narrative?.contains("relaxed day") == true)
+        XCTAssertTrue(narrative?.contains("known mapped places") == true)
     }
 
     @MainActor
