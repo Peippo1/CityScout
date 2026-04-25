@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.routes.guide import router as guide_router
 from app.routes.itinerary import router as itinerary_router
 
 
@@ -14,7 +15,7 @@ if cors_origins:
         allow_origins=cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "X-CityScout-App-Secret"],
     )
 
 
@@ -24,3 +25,4 @@ def health() -> dict[str, str]:
 
 
 app.include_router(itinerary_router)
+app.include_router(guide_router)

@@ -7,6 +7,8 @@ enum AppEnvironment {
     struct PlannerConfiguration: Equatable {
         let baseURLString: String
         let baseURLSource: String
+        let appSecret: String
+        let appSecretSource: String
     }
 
     static let current: AppEnvironment = {
@@ -21,6 +23,7 @@ enum AppEnvironment {
         static let apiBaseURL = "CITYSCOUT_API_BASE_URL"
         static let simulatorAPIBaseURL = "CITYSCOUT_SIMULATOR_API_BASE_URL"
         static let deviceAPIBaseURL = "CITYSCOUT_DEVICE_API_BASE_URL"
+        static let appSecret = "CITYSCOUT_APP_SECRET"
     }
 
     var plannerConfiguration: PlannerConfiguration {
@@ -36,11 +39,16 @@ enum AppEnvironment {
         plannerConfiguration.baseURLString
     }
 
+    var appSecret: String {
+        plannerConfiguration.appSecret
+    }
+
     #if DEBUG
     var debugPlannerSummary: String {
         let configuration = plannerConfiguration
         let displayURL = configuration.baseURLString.isEmpty ? "unconfigured" : configuration.baseURLString
-        return "\(displayURL) (\(configuration.baseURLSource))"
+        let displaySecret = configuration.appSecret.isEmpty ? "unconfigured" : "configured"
+        return "\(displayURL) (\(configuration.baseURLSource)); app secret \(displaySecret) (\(configuration.appSecretSource))"
     }
     #endif
 
@@ -78,9 +86,25 @@ enum AppEnvironment {
             baseURLSource = fallbackBaseURL.isEmpty ? "unconfigured" : "simulator fallback"
         }
 
+        let resolvedAppSecret: String
+        let appSecretSource: String
+        if let secret = resolvedValue(
+            key: Key.appSecret,
+            infoDictionary: infoDictionary,
+            environment: environment
+        ) {
+            resolvedAppSecret = secret
+            appSecretSource = Key.appSecret
+        } else {
+            resolvedAppSecret = isDebugBuild ? "dev-secret" : ""
+            appSecretSource = isDebugBuild ? "debug fallback" : "unconfigured"
+        }
+
         return PlannerConfiguration(
             baseURLString: resolvedBaseURL,
-            baseURLSource: baseURLSource
+            baseURLSource: baseURLSource,
+            appSecret: resolvedAppSecret,
+            appSecretSource: appSecretSource
         )
     }
 
