@@ -57,6 +57,19 @@ struct MoreHomeView: View {
 
             Section("Discover") {
                 NavigationLink {
+                    GuideHomeView(destinationName: destinationName)
+                } label: {
+                    MoreRow(
+                        title: "Guide",
+                        subtitle: "Chat with your city guide",
+                        systemImage: "text.bubble"
+                    )
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Guide")
+                .accessibilityHint("Opens the AI city guide for \(destinationName).")
+
+                NavigationLink {
                     LessonsHomeView(destinationName: destinationName)
                 } label: {
                     MoreRow(

@@ -1,11 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.core.security import rate_limiter
+from app.main import app
 
 
 client = TestClient(app)
+AUTH_HEADERS = {"X-CityScout-App-Secret": "dev-secret"}
 
 
 @pytest.fixture(autouse=True)
@@ -14,6 +15,36 @@ def _reset_rate_limit() -> None:
     yield
     rate_limiter.reset()
 
+
+def test_plan_itinerary_unauthorized_without_secret() -> None:
+    response = client.post(
+        "/plan-itinerary",
+        json={
+            "destination": "Paris",
+            "prompt": "Plan a relaxed day with coffee and art",
+            "preferences": [],
+            "saved_places": [],
+        },
+    )
+
+    assert response.status_code == 401
+
+
+
+
+def test_plan_itinerary_rejects_incorrect_secret() -> None:
+    response = client.post(
+        "/plan-itinerary",
+        json={
+            "destination": "Paris",
+            "prompt": "Plan a relaxed day with coffee and art",
+            "preferences": [],
+            "saved_places": [],
+        },
+        headers={"X-CityScout-App-Secret": "wrong-secret"},
+    )
+
+    assert response.status_code == 401
 
 def test_plan_itinerary_with_valid_payload_returns_expected_shape() -> None:
     response = client.post(
@@ -24,6 +55,7 @@ def test_plan_itinerary_with_valid_payload_returns_expected_shape() -> None:
             "preferences": [" Relaxed ", " Cafes ", " "],
             "saved_places": [" Louvre Museum ", "Cafe de Flore", ""],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 200
@@ -49,6 +81,7 @@ def test_plan_itinerary_rejects_empty_prompt() -> None:
             "preferences": [],
             "saved_places": [],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 422
@@ -63,6 +96,7 @@ def test_plan_itinerary_rejects_overly_long_prompt() -> None:
             "preferences": [],
             "saved_places": [],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 422
@@ -77,6 +111,7 @@ def test_plan_itinerary_rejects_empty_destination() -> None:
             "preferences": [],
             "saved_places": [],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 422
@@ -91,8 +126,8 @@ def test_plan_itinerary_rate_limits_after_threshold() -> None:
     }
 
     for _ in range(20):
-        response = client.post("/plan-itinerary", json=payload)
+        response = client.post("/plan-itinerary", json=payload, headers=AUTH_HEADERS)
         assert response.status_code == 200
 
-    response = client.post("/plan-itinerary", json=payload)
+    response = client.post("/plan-itinerary", json=payload, headers=AUTH_HEADERS)
     assert response.status_code == 429
