@@ -90,6 +90,7 @@ struct GuideHomeView: View {
             TextField("Ask your guide…", text: $inputText, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1 ... 4)
+                .disabled(isLoading)
 
             Button("Send") {
                 Task {
@@ -127,6 +128,7 @@ struct GuideHomeView: View {
                 }
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .disabled(isLoading)
             }
         }
     }
@@ -172,6 +174,17 @@ struct GuideHomeView: View {
             messages.append(GuideMessage(text: response.reply, isUser: false))
             suggestedPrompts = response.suggestedPrompts
             state = .idle
+        } catch let error as GuideAPIService.ServiceError {
+            switch error {
+            case .unauthorized:
+                state = .error("Service unavailable. Please try again.")
+            case .forbidden:
+                state = .error("The guide service rejected this request.")
+            case .rateLimited:
+                state = .error("The guide is busy right now. Please try again in a moment.")
+            default:
+                state = .error("Guide is temporarily unavailable. Please try again in a moment.")
+            }
         } catch {
             state = .error("Guide is temporarily unavailable. Please try again in a moment.")
         }

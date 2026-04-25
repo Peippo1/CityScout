@@ -4,12 +4,8 @@ import time
 from collections import deque
 from threading import Lock
 
-from fastapi import Header, HTTPException, Request
-from starlette.status import (
-    HTTP_401_UNAUTHORIZED,
-    HTTP_429_TOO_MANY_REQUESTS,
-    HTTP_503_SERVICE_UNAVAILABLE,
-)
+from fastapi import HTTPException, Request
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_429_TOO_MANY_REQUESTS, HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.core.config import settings
 
@@ -50,17 +46,15 @@ def _client_ip(request: Request) -> str:
 rate_limiter = InMemoryRateLimiter(max_requests=20, window_seconds=600)
 
 
-def verify_app_secret(x_cityscout_app_secret: str | None = Header(default=None)) -> None:
+def verify_app_secret(request: Request) -> None:
     try:
-        expected_secret = settings.require_app_secret()
-    except RuntimeError:
-        logger.error("App secret verification failed due to service misconfiguration")
-        raise HTTPException(
-            status_code=HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service unavailable",
-        )
+        expected_secret = settings.require_app_shared_secret()
+    except RuntimeError as error:
+        logger.error("Configuration error category=missing_shared_secret")
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 
-    if not x_cityscout_app_secret or not secrets.compare_digest(x_cityscout_app_secret, expected_secret):
+    supplied_secret = request.headers.get("X-CityScout-App-Secret")
+    if not supplied_secret or not secrets.compare_digest(supplied_secret, expected_secret):
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 

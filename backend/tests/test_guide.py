@@ -1,12 +1,17 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
+
+TEST_SECRET = "test-secret"
+os.environ["APP_SHARED_SECRET"] = TEST_SECRET
 
 from app.core.security import rate_limiter
 from app.main import app
 
 
 client = TestClient(app)
-AUTH_HEADERS = {"X-CityScout-App-Secret": "dev-secret"}
+AUTH_HEADERS = {"X-CityScout-App-Secret": TEST_SECRET}
 
 
 @pytest.fixture(autouse=True)
@@ -29,8 +34,6 @@ def test_guide_message_unauthorized_without_secret() -> None:
     assert response.status_code == 401
 
 
-
-
 def test_guide_message_rejects_incorrect_secret() -> None:
     response = client.post(
         "/guide/message",
@@ -43,6 +46,7 @@ def test_guide_message_rejects_incorrect_secret() -> None:
     )
 
     assert response.status_code == 401
+
 
 def test_guide_message_with_valid_payload_returns_reply() -> None:
     response = client.post(

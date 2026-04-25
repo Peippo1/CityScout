@@ -51,6 +51,12 @@ starting `uvicorn` from a different global Python installation.
 pytest
 ```
 
+## Available Endpoints
+
+- `GET /health`
+- `POST /plan-itinerary`
+- `POST /guide/message`
+
 ## Example Requests
 
 Health check:
@@ -69,5 +75,18 @@ curl -X POST http://127.0.0.1:8000/plan-itinerary \
     "prompt": "Plan me a relaxed day with coffee and art",
     "preferences": ["Relaxed", "Cafes", "Sightseeing"],
     "saved_places": ["Louvre Museum", "Cafe de Flore"]
+  }'
+```
+
+Guide message:
+
+```bash
+curl -X POST http://127.0.0.1:8000/guide/message \
+  -H "X-CityScout-App-Secret: your_shared_secret" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destination": "Paris",
+    "message": "Give me a short walking tour",
+    "context": []
   }'
 ```

@@ -23,29 +23,24 @@ class Settings:
             raise RuntimeError(f"APP_ENV must be one of {sorted(_ALLOWED_ENVS)}. Got: {value}.")
         return value
 
-    def app_secret(self) -> str | None:
-        return _read_env("CITYSCOUT_APP_SECRET")
-
-    def require_app_secret(self) -> str:
-        configured_secret = self.app_secret()
-        if configured_secret:
-            if self.app_env() in {"staging", "production"} and len(configured_secret) < 16:
-                raise RuntimeError("CITYSCOUT_APP_SECRET must be at least 16 characters in staging/production.")
-            return configured_secret
-
-        if self.app_env() in {"development", "test"}:
-            return "dev-secret"
-
-        raise RuntimeError(
-            "CITYSCOUT_APP_SECRET is missing. Set it in the environment before accepting authenticated requests."
-        )
-
     def require_openai_api_key(self) -> str:
         key = _read_env("OPENAI_API_KEY")
         if key:
             return key
         raise RuntimeError(
             "OPENAI_API_KEY is missing. Set it in the environment or backend/.env before calling OpenAI."
+        )
+
+    def require_app_shared_secret(self) -> str:
+        secret = _read_env("APP_SHARED_SECRET")
+        if secret:
+            if self.app_env() in {"staging", "production"} and len(secret) < 16:
+                raise RuntimeError("APP_SHARED_SECRET must be at least 16 characters in staging/production.")
+            return secret
+        if self.app_env() in {"development", "test"}:
+            return "change_me_for_private_testing"
+        raise RuntimeError(
+            "APP_SHARED_SECRET is missing. Set it in the environment or backend/.env before accepting authenticated requests."
         )
 
     def cors_origins(self) -> list[str]:
