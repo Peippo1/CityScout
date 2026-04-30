@@ -64,7 +64,11 @@ def test_guide_message_requires_shared_secret(client) -> None:
     response = client.post("/guide/message", json=_valid_guide_payload())
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Unauthorized"}
+    payload = response.json()
+    assert payload["error"]["code"] == "UNAUTHORIZED"
+    assert payload["error"]["message"] == "Unauthorized"
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
 
 
 def test_guide_message_rejects_invalid_shared_secret(client) -> None:
@@ -75,7 +79,11 @@ def test_guide_message_rejects_invalid_shared_secret(client) -> None:
     )
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Unauthorized"}
+    payload = response.json()
+    assert payload["error"]["code"] == "UNAUTHORIZED"
+    assert payload["error"]["message"] == "Unauthorized"
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
 
 
 def test_guide_message_accepts_valid_shared_secret_and_returns_valid_response(
@@ -98,6 +106,8 @@ def test_guide_message_accepts_valid_shared_secret_and_returns_valid_response(
     assert validated.reply == fake_reply
     assert isinstance(payload["suggested_prompts"], list)
     assert payload["suggested_prompts"]
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
 
 
 @pytest.mark.parametrize(
@@ -119,7 +129,11 @@ def test_guide_message_rejects_invalid_payloads(client, auth_headers, payload) -
     response = client.post("/guide/message", json=payload, headers=auth_headers)
 
     assert response.status_code == 422
-    assert isinstance(response.json()["detail"], list)
+    body = response.json()
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+    assert body["error"]["message"] == "Invalid request body"
+    assert isinstance(body["error"]["details"], list)
+    assert isinstance(body["request_id"], str)
 
 
 def test_guide_message_rate_limits_after_threshold(client, auth_headers, monkeypatch) -> None:
@@ -131,7 +145,11 @@ def test_guide_message_rate_limits_after_threshold(client, auth_headers, monkeyp
     response = client.post("/guide/message", json=_valid_guide_payload(), headers=auth_headers)
 
     assert response.status_code == 429
-    assert response.json() == {"detail": "Rate limit exceeded"}
+    payload = response.json()
+    assert payload["error"]["code"] == "RATE_LIMITED"
+    assert payload["error"]["message"] == "Rate limit exceeded"
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
 
 
 def test_guide_message_returns_fallback_when_openai_client_fails(
@@ -154,3 +172,5 @@ def test_guide_message_returns_fallback_when_openai_client_fails(
     assert validated.destination == "Paris"
     assert payload["reply"].startswith("I can still help with Paris.")
     assert payload["suggested_prompts"]
+    assert "Paris" in payload["reply"]
+    assert isinstance(payload["request_id"], str)

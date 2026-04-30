@@ -48,3 +48,4 @@ class GuideMessageResponse(BaseModel):
     destination: str
     reply: str
     suggested_prompts: list[str] = Field(default_factory=list)
+    request_id: str | None = None

@@ -63,3 +63,4 @@ class ItineraryResponse(BaseModel):
     afternoon: ItineraryBlock
     evening: ItineraryBlock
     notes: list[str] = Field(default_factory=list)
+    request_id: str | None = None

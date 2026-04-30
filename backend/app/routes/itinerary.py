@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
+from app.core.http import get_request_id
 from app.core.security import enforce_rate_limit, verify_app_secret
 from app.schemas.itinerary import ItineraryRequest, ItineraryResponse
 from app.services.itinerary_service import generate_itinerary
@@ -16,11 +17,13 @@ logger = logging.getLogger(__name__)
     response_model=ItineraryResponse,
     dependencies=[Depends(verify_app_secret), Depends(enforce_rate_limit)],
 )
-def plan_itinerary(request: ItineraryRequest) -> ItineraryResponse:
+def plan_itinerary(request: Request, payload: ItineraryRequest) -> ItineraryResponse:
     logger.info(
         "Received itinerary request destination=%s preferences_count=%s saved_places_count=%s",
-        request.destination,
-        len(request.preferences),
-        len(request.saved_places),
+        payload.destination,
+        len(payload.preferences),
+        len(payload.saved_places),
     )
-    return generate_itinerary(request)
+    response = generate_itinerary(payload)
+    response.request_id = get_request_id(request)
+    return response

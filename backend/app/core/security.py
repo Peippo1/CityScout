@@ -1,5 +1,5 @@
 import logging
-import secrets
+import hmac
 import time
 from collections import deque
 from threading import Lock
@@ -54,7 +54,7 @@ def verify_app_secret(request: Request) -> None:
         raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)) from error
 
     supplied_secret = request.headers.get("X-CityScout-App-Secret")
-    if not supplied_secret or not secrets.compare_digest(supplied_secret, expected_secret):
+    if not supplied_secret or not hmac.compare_digest(supplied_secret, expected_secret):
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 

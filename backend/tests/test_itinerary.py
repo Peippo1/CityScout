@@ -67,7 +67,11 @@ def test_plan_itinerary_requires_shared_secret(client) -> None:
     response = client.post("/plan-itinerary", json=_valid_itinerary_payload())
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Unauthorized"}
+    payload = response.json()
+    assert payload["error"]["code"] == "UNAUTHORIZED"
+    assert payload["error"]["message"] == "Unauthorized"
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
 
 
 def test_plan_itinerary_rejects_invalid_shared_secret(client) -> None:
@@ -78,7 +82,11 @@ def test_plan_itinerary_rejects_invalid_shared_secret(client) -> None:
     )
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Unauthorized"}
+    payload = response.json()
+    assert payload["error"]["code"] == "UNAUTHORIZED"
+    assert payload["error"]["message"] == "Unauthorized"
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
 
 
 def test_plan_itinerary_accepts_valid_shared_secret_and_returns_valid_response(
@@ -107,6 +115,9 @@ def test_plan_itinerary_accepts_valid_shared_secret_and_returns_valid_response(
     assert payload["afternoon"]["activities"] == fake_response["afternoon"]["activities"]
     assert payload["evening"]["activities"] == fake_response["evening"]["activities"]
     assert payload["notes"] == fake_response["notes"]
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
+    assert response.headers["X-Frame-Options"] == "DENY"
 
 
 @pytest.mark.parametrize(
@@ -130,7 +141,11 @@ def test_plan_itinerary_rejects_invalid_payloads(client, auth_headers, payload) 
     response = client.post("/plan-itinerary", json=payload, headers=auth_headers)
 
     assert response.status_code == 422
-    assert isinstance(response.json()["detail"], list)
+    body = response.json()
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+    assert body["error"]["message"] == "Invalid request body"
+    assert isinstance(body["error"]["details"], list)
+    assert isinstance(body["request_id"], str)
 
 
 def test_plan_itinerary_rate_limits_after_threshold(client, auth_headers, monkeypatch) -> None:
@@ -142,7 +157,11 @@ def test_plan_itinerary_rate_limits_after_threshold(client, auth_headers, monkey
     response = client.post("/plan-itinerary", json=_valid_itinerary_payload(), headers=auth_headers)
 
     assert response.status_code == 429
-    assert response.json() == {"detail": "Rate limit exceeded"}
+    payload = response.json()
+    assert payload["error"]["code"] == "RATE_LIMITED"
+    assert payload["error"]["message"] == "Rate limit exceeded"
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
 
 
 def test_plan_itinerary_returns_fallback_when_openai_client_fails(
@@ -165,3 +184,5 @@ def test_plan_itinerary_returns_fallback_when_openai_client_fails(
     assert validated.destination == "Paris"
     assert any("mocked planning response" in note for note in payload["notes"])
     assert any("backend is ready" in note for note in payload["notes"])
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]
