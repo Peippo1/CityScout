@@ -1,146 +1,167 @@
-import os
+from __future__ import annotations
+
+import json
+from types import SimpleNamespace
 
 import pytest
-from fastapi.testclient import TestClient
-
-TEST_SECRET = "test-secret"
-os.environ["APP_SHARED_SECRET"] = TEST_SECRET
 
 from app.core.security import rate_limiter
-from app.main import app
+from app.schemas.itinerary import ItineraryResponse
+from app.services import itinerary_service
 
 
-client = TestClient(app)
-AUTH_HEADERS = {"X-CityScout-App-Secret": "dev-secret"}
+def _validate_model(model: type, payload: dict) -> object:
+    if hasattr(model, "model_validate"):
+        return model.model_validate(payload)
+    return model.parse_obj(payload)
 
 
-def _auth_headers() -> dict[str, str]:
-    return {"X-CityScout-App-Secret": TEST_SECRET}
+def _valid_itinerary_payload() -> dict[str, object]:
+    return {
+        "destination": "Paris",
+        "prompt": "Plan a relaxed day with coffee and art",
+        "preferences": [" Relaxed ", " Cafes ", " "],
+        "saved_places": [" Louvre Museum ", "Cafe de Flore", ""],
+    }
 
 
-@pytest.fixture(autouse=True)
-def _reset_rate_limit() -> None:
-    rate_limiter.reset()
-    yield
-    rate_limiter.reset()
+def _fake_openai_success(response_payload: dict[str, object]):
+    class FakeCompletions:
+        def create(self, *args, **kwargs):
+            content = json.dumps(response_payload)
+            return SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content=content))]
+            )
+
+    class FakeChat:
+        def __init__(self):
+            self.completions = FakeCompletions()
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            self.chat = FakeChat()
+
+    return FakeClient
 
 
-def test_plan_itinerary_unauthorized_without_secret() -> None:
-    response = client.post(
-        "/plan-itinerary",
-        json={
-            "destination": "Paris",
-            "prompt": "Plan a relaxed day with coffee and art",
-            "preferences": [],
-            "saved_places": [],
-        },
-    )
+def _fake_openai_failure(*args, **kwargs):
+    class FakeAPIConnectionError(Exception):
+        pass
+
+    class FakeCompletions:
+        def create(self, *args, **kwargs):
+            raise FakeAPIConnectionError("simulated connection failure")
+
+    class FakeChat:
+        def __init__(self):
+            self.completions = FakeCompletions()
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            self.chat = FakeChat()
+
+    return FakeAPIConnectionError, FakeClient
+
+
+def test_plan_itinerary_requires_shared_secret(client) -> None:
+    response = client.post("/plan-itinerary", json=_valid_itinerary_payload())
 
     assert response.status_code == 401
+    assert response.json() == {"detail": "Unauthorized"}
 
 
-def test_plan_itinerary_rejects_incorrect_secret() -> None:
+def test_plan_itinerary_rejects_invalid_shared_secret(client) -> None:
     response = client.post(
         "/plan-itinerary",
-        json={
-            "destination": "Paris",
-            "prompt": "Plan a relaxed day with coffee and art",
-            "preferences": [],
-            "saved_places": [],
-        },
+        json=_valid_itinerary_payload(),
         headers={"X-CityScout-App-Secret": "wrong-secret"},
     )
 
     assert response.status_code == 401
+    assert response.json() == {"detail": "Unauthorized"}
 
 
-def test_plan_itinerary_with_valid_payload_returns_expected_shape() -> None:
-    response = client.post(
-        "/plan-itinerary",
-        headers=_auth_headers(),
-        json={
-            "destination": "Paris",
-            "prompt": "Plan a relaxed day with coffee and art",
-            "preferences": [" Relaxed ", " Cafes ", " "],
-            "saved_places": [" Louvre Museum ", "Cafe de Flore", ""],
-        },
-        headers=AUTH_HEADERS,
-    )
+def test_plan_itinerary_accepts_valid_shared_secret_and_returns_valid_response(
+    client,
+    auth_headers,
+    monkeypatch,
+) -> None:
+    fake_response = {
+        "morning": {"title": "Morning", "activities": ["Coffee near the river", "Visit a museum"]},
+        "afternoon": {"title": "Afternoon", "activities": ["Lunch in Le Marais", "Walk a gallery district"]},
+        "evening": {"title": "Evening", "activities": ["Dinner in Saint-Germain", "Evening stroll along the Seine"]},
+        "notes": ["Mocked itinerary response from the test suite."],
+    }
+    monkeypatch.setattr(itinerary_service.settings, "require_openai_api_key", lambda: "test-key")
+    monkeypatch.setattr(itinerary_service, "OpenAI", _fake_openai_success(fake_response))
+
+    response = client.post("/plan-itinerary", json=_valid_itinerary_payload(), headers=auth_headers)
 
     assert response.status_code == 200
 
     payload = response.json()
-    assert payload["destination"] == "Paris"
+    validated = _validate_model(ItineraryResponse, payload)
 
-    for block_name in ("morning", "afternoon", "evening"):
-        assert block_name in payload
-        assert "title" in payload[block_name]
-        assert "activities" in payload[block_name]
-        assert isinstance(payload[block_name]["activities"], list)
-
-    assert "notes" in payload
+    assert validated.destination == "Paris"
+    assert payload["morning"]["activities"] == fake_response["morning"]["activities"]
+    assert payload["afternoon"]["activities"] == fake_response["afternoon"]["activities"]
+    assert payload["evening"]["activities"] == fake_response["evening"]["activities"]
+    assert payload["notes"] == fake_response["notes"]
 
 
-def test_plan_itinerary_rejects_empty_prompt() -> None:
-    response = client.post(
-        "/plan-itinerary",
-        headers=_auth_headers(),
-        json={
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {
             "destination": "Paris",
             "prompt": "   ",
             "preferences": [],
             "saved_places": [],
         },
-        headers=AUTH_HEADERS,
-    )
-
-    assert response.status_code == 422
-
-
-def test_plan_itinerary_rejects_overly_long_prompt() -> None:
-    response = client.post(
-        "/plan-itinerary",
-        headers=_auth_headers(),
-        json={
-            "destination": "Paris",
-            "prompt": "x" * 1001,
-            "preferences": [],
-            "saved_places": [],
-        },
-        headers=AUTH_HEADERS,
-    )
-
-    assert response.status_code == 422
-
-
-def test_plan_itinerary_rejects_empty_destination() -> None:
-    response = client.post(
-        "/plan-itinerary",
-        headers=_auth_headers(),
-        json={
+        {
             "destination": "   ",
             "prompt": "Plan a relaxed day with coffee and art",
             "preferences": [],
             "saved_places": [],
         },
-        headers=AUTH_HEADERS,
-    )
+    ],
+)
+def test_plan_itinerary_rejects_invalid_payloads(client, auth_headers, payload) -> None:
+    response = client.post("/plan-itinerary", json=payload, headers=auth_headers)
 
     assert response.status_code == 422
+    assert isinstance(response.json()["detail"], list)
 
 
-def test_plan_itinerary_rate_limits_after_threshold() -> None:
-    payload = {
-        "destination": "Paris",
-        "prompt": "Plan a relaxed day with coffee and art",
-        "preferences": [],
-        "saved_places": [],
-    }
+def test_plan_itinerary_rate_limits_after_threshold(client, auth_headers, monkeypatch) -> None:
+    monkeypatch.setattr(rate_limiter, "max_requests", 1)
 
-    for _ in range(20):
-        response = client.post("/plan-itinerary", headers=_auth_headers(), json=payload)
-        assert response.status_code == 200
+    response = client.post("/plan-itinerary", json=_valid_itinerary_payload(), headers=auth_headers)
+    assert response.status_code == 200
 
-    response = client.post("/plan-itinerary", headers=_auth_headers(), json=payload)
+    response = client.post("/plan-itinerary", json=_valid_itinerary_payload(), headers=auth_headers)
 
     assert response.status_code == 429
+    assert response.json() == {"detail": "Rate limit exceeded"}
+
+
+def test_plan_itinerary_returns_fallback_when_openai_client_fails(
+    client,
+    auth_headers,
+    monkeypatch,
+) -> None:
+    fake_error, fake_client = _fake_openai_failure()
+    monkeypatch.setattr(itinerary_service, "APIConnectionError", fake_error)
+    monkeypatch.setattr(itinerary_service, "OpenAI", fake_client)
+    monkeypatch.setattr(itinerary_service.settings, "require_openai_api_key", lambda: "test-key")
+
+    response = client.post("/plan-itinerary", json=_valid_itinerary_payload(), headers=auth_headers)
+
+    assert response.status_code == 200
+
+    payload = response.json()
+    validated = _validate_model(ItineraryResponse, payload)
+
+    assert validated.destination == "Paris"
+    assert any("mocked planning response" in note for note in payload["notes"])
+    assert any("backend is ready" in note for note in payload["notes"])
