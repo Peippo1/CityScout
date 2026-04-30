@@ -11,6 +11,7 @@ from app.main import app
 
 
 client = TestClient(app)
+AUTH_HEADERS = {"X-CityScout-App-Secret": "dev-secret"}
 
 
 def _auth_headers() -> dict[str, str]:
@@ -63,6 +64,7 @@ def test_plan_itinerary_with_valid_payload_returns_expected_shape() -> None:
             "preferences": [" Relaxed ", " Cafes ", " "],
             "saved_places": [" Louvre Museum ", "Cafe de Flore", ""],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 200
@@ -89,6 +91,7 @@ def test_plan_itinerary_rejects_empty_prompt() -> None:
             "preferences": [],
             "saved_places": [],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 422
@@ -104,6 +107,7 @@ def test_plan_itinerary_rejects_overly_long_prompt() -> None:
             "preferences": [],
             "saved_places": [],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 422
@@ -119,6 +123,7 @@ def test_plan_itinerary_rejects_empty_destination() -> None:
             "preferences": [],
             "saved_places": [],
         },
+        headers=AUTH_HEADERS,
     )
 
     assert response.status_code == 422
