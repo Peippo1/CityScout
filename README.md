@@ -109,6 +109,35 @@ For public web deployment, prefer a backend-for-frontend proxy or a public-safe 
 - The web app currently relies on manual verification
 - TestFlight is a near-term target
 
+## Local Verification
+
+Use these commands before opening a PR:
+
+### Backend
+
+```bash
+cd backend
+python -m pip install -r requirements.txt
+python -m pytest
+bandit -r app -x tests
+```
+
+### Web
+
+```bash
+cd web
+npm install
+npm run lint
+npm test
+npm run build
+```
+
+### iOS
+
+```bash
+xcodebuild -project CityScout.xcodeproj -scheme CityScout -configuration Debug -sdk iphonesimulator -destination "generic/platform=iOS Simulator" clean build
+```
+
 ## License
 
 CityScout is proprietary and not open source.

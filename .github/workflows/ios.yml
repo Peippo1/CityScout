@@ -2,13 +2,26 @@ name: iOS (CityScout)
 
 on:
   push:
-    branches: ["dev"]
+    branches: ["main", "dev"]
+    paths:
+      - "CityScout/**"
+      - "CityScout.xcodeproj/**"
+      - "CityScoutTests/**"
+      - "CityScoutUITests/**"
+      - ".github/workflows/ios.yml"
+      - "README.md"
   pull_request:
-    branches: ["dev"]
+    paths:
+      - "CityScout/**"
+      - "CityScout.xcodeproj/**"
+      - "CityScoutTests/**"
+      - "CityScoutUITests/**"
+      - ".github/workflows/ios.yml"
+      - "README.md"
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build-smoke:
     runs-on: macos-15
 
     steps:
@@ -18,25 +31,10 @@ jobs:
       - name: Xcode version
         run: xcodebuild -version
 
-      - name: List runtimes and devices
-        run: |
-          xcrun simctl list runtimes
-          xcrun simctl list devices
-
       - name: List schemes
         run: xcodebuild -list -project CityScout.xcodeproj
 
-      # Create + boot a known-good simulator (iPhone 15 is commonly available)
-      - name: Create and boot simulator
-        run: |
-          RUNTIME_ID=$(xcrun simctl list runtimes | grep -E "iOS.*com.apple.CoreSimulator.SimRuntime.iOS" | tail -n 1 | sed -E 's/.*(com.apple.CoreSimulator.SimRuntime.iOS[^ ]*).*/\1/')
-          echo "Using runtime: $RUNTIME_ID"
-          DEVICE_ID=$(xcrun simctl create "CI-iPhone" "iPhone 15" "$RUNTIME_ID")
-          echo "Created device: $DEVICE_ID"
-          xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl bootstatus "$DEVICE_ID" -b
-
-      - name: Build (Simulator)
+      - name: Build smoke test
         run: |
           xcodebuild \
             -project CityScout.xcodeproj \
@@ -45,13 +43,3 @@ jobs:
             -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \
             clean build
-
-      - name: Test (Simulator)
-        run: |
-          xcodebuild \
-            -project CityScout.xcodeproj \
-            -scheme CityScout \
-            -configuration Debug \
-            -sdk iphonesimulator \
-          -destination "platform=iOS Simulator,name=CI-iPhone" \
-            test

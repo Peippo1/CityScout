@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Baskervville, Inter } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-const display = Fraunces({
+const editorial = Baskervville({
   subsets: ["latin"],
-  variable: "--font-display"
+  variable: "--font-editorial",
+  weight: ["400"]
 });
 
-const sans = Manrope({
+const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans"
 });
@@ -24,7 +25,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable}`}>
+    <html lang="en" className={`${editorial.variable} ${sans.variable}`}>
       <body>{children}</body>
     </html>
   );
