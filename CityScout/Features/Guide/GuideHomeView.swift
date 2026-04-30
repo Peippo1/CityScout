@@ -15,9 +15,9 @@ struct GuideHomeView: View {
 
     private let starterPrompts = [
         "What should I know about this city?",
-        "Give me a short walking tour",
-        "What food should I try?",
-        "Tell me something interesting nearby",
+        "What are some interesting facts nearby?",
+        "What local food should I try?",
+        "Give me a short walking tour idea",
     ]
 
     let destinationName: String
@@ -178,6 +178,10 @@ struct GuideHomeView: View {
             switch error {
             case .unauthorized:
                 state = .error("Service unavailable. Please try again.")
+            case .forbidden:
+                state = .error("The guide service rejected this request.")
+            case .rateLimited:
+                state = .error("The guide is busy right now. Please try again in a moment.")
             default:
                 state = .error("Guide is temporarily unavailable. Please try again in a moment.")
             }

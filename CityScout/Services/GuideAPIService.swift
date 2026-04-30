@@ -79,7 +79,7 @@ struct GuideAPIService {
         request.httpMethod = "POST"
         request.timeoutInterval = 20
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(environment.appSecret, forHTTPHeaderField: "X-CityScout-App-Secret")
+        request.setValue(environment.appSharedSecret, forHTTPHeaderField: "X-CityScout-App-Secret")
 
         do {
             request.httpBody = try JSONEncoder().encode(

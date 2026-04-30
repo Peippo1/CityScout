@@ -48,6 +48,18 @@ class Settings:
             "OPENAI_API_KEY is missing. Set it in the environment or backend/.env before calling OpenAI."
         )
 
+    def require_app_shared_secret(self) -> str:
+        secret = _read_env("APP_SHARED_SECRET")
+        if secret:
+            if self.app_env() in {"staging", "production"} and len(secret) < 16:
+                raise RuntimeError("APP_SHARED_SECRET must be at least 16 characters in staging/production.")
+            return secret
+        if self.app_env() in {"development", "test"}:
+            return "change_me_for_private_testing"
+        raise RuntimeError(
+            "APP_SHARED_SECRET is missing. Set it in the environment or backend/.env before accepting authenticated requests."
+        )
+
     def cors_origins(self) -> list[str]:
         origins: list[str] = []
         if self.app_env() in {"development", "test"}:

@@ -7,8 +7,8 @@ enum AppEnvironment {
     struct PlannerConfiguration: Equatable {
         let baseURLString: String
         let baseURLSource: String
-        let appSecret: String
-        let appSecretSource: String
+        let appSharedSecret: String
+        let appSharedSecretSource: String
     }
 
     static let current: AppEnvironment = {
@@ -19,11 +19,27 @@ enum AppEnvironment {
         #endif
     }()
 
+    private static var isRunningInSimulator: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    private static var isDebugBuild: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
+
     private enum Key {
         static let apiBaseURL = "CITYSCOUT_API_BASE_URL"
         static let simulatorAPIBaseURL = "CITYSCOUT_SIMULATOR_API_BASE_URL"
         static let deviceAPIBaseURL = "CITYSCOUT_DEVICE_API_BASE_URL"
-        static let appSecret = "CITYSCOUT_APP_SECRET"
+        static let appSharedSecret = "APP_SHARED_SECRET"
     }
 
     var plannerConfiguration: PlannerConfiguration {
@@ -31,7 +47,7 @@ enum AppEnvironment {
             infoDictionary: Bundle.main.infoDictionary ?? [:],
             environment: ProcessInfo.processInfo.environment,
             isSimulator: Self.isRunningInSimulator,
-            isDebugBuild: isDebugBuild
+            isDebugBuild: Self.isDebugBuild
         )
     }
 
@@ -39,16 +55,16 @@ enum AppEnvironment {
         plannerConfiguration.baseURLString
     }
 
-    var appSecret: String {
-        plannerConfiguration.appSecret
+    var appSharedSecret: String {
+        plannerConfiguration.appSharedSecret
     }
 
     #if DEBUG
     var debugPlannerSummary: String {
         let configuration = plannerConfiguration
         let displayURL = configuration.baseURLString.isEmpty ? "unconfigured" : configuration.baseURLString
-        let displaySecret = configuration.appSecret.isEmpty ? "unconfigured" : "configured"
-        return "\(displayURL) (\(configuration.baseURLSource)); app secret \(displaySecret) (\(configuration.appSecretSource))"
+        let displaySecret = configuration.appSharedSecret.isEmpty ? "unconfigured" : "configured"
+        return "\(displayURL) (\(configuration.baseURLSource)); app shared secret \(displaySecret) (\(configuration.appSharedSecretSource))"
     }
     #endif
 
@@ -86,43 +102,26 @@ enum AppEnvironment {
             baseURLSource = fallbackBaseURL.isEmpty ? "unconfigured" : "simulator fallback"
         }
 
-        let resolvedAppSecret: String
-        let appSecretSource: String
+        let resolvedAppSharedSecret: String
+        let appSharedSecretSource: String
         if let secret = resolvedValue(
-            key: Key.appSecret,
+            key: Key.appSharedSecret,
             infoDictionary: infoDictionary,
             environment: environment
         ) {
-            resolvedAppSecret = secret
-            appSecretSource = Key.appSecret
+            resolvedAppSharedSecret = secret
+            appSharedSecretSource = Key.appSharedSecret
         } else {
-            resolvedAppSecret = isDebugBuild ? "dev-secret" : ""
-            appSecretSource = isDebugBuild ? "debug fallback" : "unconfigured"
+            resolvedAppSharedSecret = isDebugBuild ? "change_me_for_private_testing" : ""
+            appSharedSecretSource = isDebugBuild ? "debug fallback" : "unconfigured"
         }
 
         return PlannerConfiguration(
             baseURLString: resolvedBaseURL,
             baseURLSource: baseURLSource,
-            appSecret: resolvedAppSecret,
-            appSecretSource: appSecretSource
+            appSharedSecret: resolvedAppSharedSecret,
+            appSharedSecretSource: appSharedSecretSource
         )
-    }
-
-    private var isDebugBuild: Bool {
-        switch self {
-        case .debug:
-            return true
-        case .release:
-            return false
-        }
-    }
-
-    private static var isRunningInSimulator: Bool {
-        #if targetEnvironment(simulator)
-        return true
-        #else
-        return false
-        #endif
     }
 
     private static func resolvedValue(
@@ -130,18 +129,14 @@ enum AppEnvironment {
         infoDictionary: [String: Any],
         environment: [String: String]
     ) -> String? {
-        if let environmentValue = environment[key] {
-            let trimmed = environmentValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty == false {
-                return trimmed
-            }
+        if let environmentValue = environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           environmentValue.isEmpty == false {
+            return environmentValue
         }
 
         if let infoValue = infoDictionary[key] as? String {
             let trimmed = infoValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty == false {
-                return trimmed
-            }
+            return trimmed.isEmpty ? nil : trimmed
         }
 
         return nil

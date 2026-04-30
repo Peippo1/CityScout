@@ -72,7 +72,7 @@ struct TripShellView: View {
             }
 
             NavigationStack {
-                MoreHomeView(destinationName: destinationName)
+                MoreHomeView(destinationName: destinationName) // Includes Guide while primary tabs stay uncluttered
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Change City") {
