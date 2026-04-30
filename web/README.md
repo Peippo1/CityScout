@@ -73,7 +73,7 @@ The web app now has a minimal test baseline:
 - `npm test` runs Vitest once
 - `npm run test:watch` runs Vitest in watch mode
 - `npm run test:e2e` runs Playwright smoke tests
-- `npm run lint` runs the Next.js ESLint rules
+- `npm run lint` runs ESLint with the Next.js rules
 
 The current baseline includes:
 

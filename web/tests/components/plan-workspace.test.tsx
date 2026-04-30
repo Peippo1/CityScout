@@ -8,7 +8,7 @@ describe("PlanWorkspace", () => {
     expect(screen.getByLabelText(/Destination/i)).toHaveValue("Paris");
     expect(screen.getByLabelText(/Notes/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Generate itinerary/i })).toBeEnabled();
-    expect(screen.getByText(/Generate a draft to see a city timeline/i)).toBeInTheDocument();
+    expect(screen.getByText(/Generate a draft to see a simple timeline/i)).toBeInTheDocument();
     expect(screen.getByText(/Map preview/i)).toBeInTheDocument();
   });
 });
