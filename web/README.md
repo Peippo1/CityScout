@@ -53,7 +53,7 @@ web/
 
 ## Manual Verification
 
-There is no automated test setup in this web scaffold yet. Validate the `/plan` flow manually:
+Use these steps when you want to verify the `/plan` flow in the browser:
 
 1. Start the backend service and set `CITYSCOUT_API_BASE_URL` and `CITYSCOUT_APP_SHARED_SECRET` in `web/.env.local`.
 2. Run `cd web && npm install && npm run dev`.
@@ -63,3 +63,20 @@ There is no automated test setup in this web scaffold yet. Validate the `/plan` 
 6. Confirm a generated itinerary renders with stop time, category, description, and mapped/unmatched badges.
 7. Temporarily point the proxy env vars at an invalid backend or stop the backend to confirm the error state renders cleanly.
 8. Refresh the page and confirm the empty state returns before a new submission.
+
+## Testing
+
+The web app now has a minimal test baseline:
+
+- `npm test` runs Vitest once
+- `npm run test:watch` runs Vitest in watch mode
+- `npm run test:e2e` runs Playwright smoke tests
+- `npm run lint` runs the Next.js ESLint rules
+
+The current baseline includes:
+
+- one component test for the planning workspace shell
+- one route-handler test for `/api/plan-itinerary`
+- one Playwright smoke test for the homepage
+
+Run the backend first when you want the e2e path to exercise the full stack.

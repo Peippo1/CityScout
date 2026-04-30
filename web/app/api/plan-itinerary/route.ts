@@ -2,6 +2,24 @@ import { type NextRequest } from "next/server";
 import { proxyJsonToBackend } from "@/app/api/_lib/proxy";
 import type { PlanItineraryRequest } from "@/types/itinerary";
 
+function methodNotAllowedResponse(requestId: string) {
+  return Response.json(
+    {
+      error: {
+        code: "method_not_allowed",
+        message: "Only POST is supported for this route.",
+        request_id: requestId
+      }
+    },
+    {
+      status: 405,
+      headers: {
+        "X-Request-Id": requestId
+      }
+    }
+  );
+}
+
 function isPlanItineraryRequest(value: unknown): value is PlanItineraryRequest {
   if (!isRecord(value)) {
     return false;
@@ -103,6 +121,11 @@ export async function POST(request: NextRequest) {
     requestBody: normalized,
     requestId
   });
+}
+
+export async function GET(request: NextRequest) {
+  const requestId = request.headers.get("X-Request-Id") ?? crypto.randomUUID();
+  return methodNotAllowedResponse(requestId);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

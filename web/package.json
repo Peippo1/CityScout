@@ -9,7 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint . --ext .ts,.tsx"
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "^15.0.0",
