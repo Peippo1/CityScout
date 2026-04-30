@@ -1,6 +1,6 @@
 # CityScout
 
-CityScout is a city-first iOS travel companion built with SwiftUI and SwiftData, backed by a FastAPI + OpenAI service for itinerary generation.
+CityScout is a city-first iOS travel companion built with SwiftUI and SwiftData, backed by a FastAPI + OpenAI service for itinerary generation and guide replies.
 
 It helps people travel like a local with language support, planning tools, and in-trip utility tied to a specific destination.
 
@@ -12,17 +12,18 @@ It helps people travel like a local with language support, planning tools, and i
 - Map with saved places, category styling, itinerary focus mode, and route visualisation
 - Search across POIs and saved places
 - AI itinerary generation with save item, save all, persisted itineraries, regenerate, and itinerary-to-POI matching
+- AI guide chat for local-style questions about a destination
 - Mapped vs unmatched itinerary distinction
 - Light brand system and branded UI pass
 
 ## Architecture
 - SwiftUI + SwiftData, destination-scoped data model
-- FastAPI backend with OpenAI integration for itinerary generation
+- FastAPI backend with OpenAI integration for itinerary generation and guide chat
 - Backend validation and tests for reliability
 
 ## Current Status
 - V1 feature set is in place with destination-scoped flows and local-first persistence
-- Itinerary generation and map integration are live in the app
+- Itinerary generation, guide chat, and map integration are live in the app
 - Backend tests and validation are in place
 
 ## Testing Readiness
