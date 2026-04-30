@@ -4,6 +4,8 @@ This backend is a lightweight FastAPI service for CityScout. It sits between the
 
 It currently uses in-memory rate limiting only. Production protection should come from deployment-side controls and proper authentication, not client-embedded secrets.
 
+No license is granted by this repository. See the root [LICENSE](../LICENSE) file for the full restricted terms.
+
 ## Create a Virtual Environment
 
 ```bash

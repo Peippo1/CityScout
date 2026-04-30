@@ -16,6 +16,8 @@ This directory contains the new Next.js planning surface for CityScout.
 
 The web app is the planning and sharing layer for CityScout. The native iOS app remains the primary in-trip travel companion.
 
+No license is granted by this repository. See the root [LICENSE](../LICENSE) file for the full restricted terms.
+
 ## Run Locally
 
 ```bash

@@ -2,15 +2,17 @@ Copyright (c) 2026 Tim Finch
 
 All rights reserved.
 
-This software and associated documentation files (the "Software") are the proprietary property of Tim Finch.
+This software and associated documentation files (the "Software") are the proprietary and confidential
+property of Tim Finch.
 
-No part of this Software may be:
-- copied
-- modified
-- distributed
-- sublicensed
-- or used for commercial or non-commercial purposes
+No license or other rights are granted by implication, estoppel, or otherwise.
+Except with the prior written permission of the copyright holder, no person may:
+- copy, reproduce, or store the Software
+- modify, adapt, translate, or create derivative works of the Software
+- distribute, publish, disclose, sublicense, sell, rent, lease, or otherwise transfer the Software
+- use the Software for any commercial or non-commercial purpose
+- remove or alter any copyright, trademark, or proprietary notices
 
-without explicit prior written permission from the author.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, AND NON-INFRINGEMENT.

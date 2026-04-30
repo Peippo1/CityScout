@@ -140,6 +140,6 @@ xcodebuild -project CityScout.xcodeproj -scheme CityScout -configuration Debug -
 
 ## License
 
-CityScout is proprietary and not open source.
+CityScout is proprietary and not open source. See [LICENSE](./LICENSE) for the full restricted terms.
 
 © 2026 Tim Finch. All rights reserved.
