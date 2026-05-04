@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { proxyJsonToBackend } from "@/app/api/_lib/proxy";
+import { enforceWebProxyRateLimit, proxyJsonToBackend } from "@/app/api/_lib/proxy";
 import type { GuideMessageRequest } from "@/types/guide";
 
 function isGuideMessageRequest(value: unknown): value is GuideMessageRequest {
@@ -28,6 +28,11 @@ function normalizeRequest(value: unknown): GuideMessageRequest | null {
 
 export async function POST(request: NextRequest) {
   const requestId = request.headers.get("X-Request-Id") ?? crypto.randomUUID();
+  const rateLimitError = enforceWebProxyRateLimit(request, requestId, "/guide/message");
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   let parsedBody: unknown;
   try {
     parsedBody = await request.json();

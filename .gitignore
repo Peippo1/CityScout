@@ -25,6 +25,8 @@ xcuserdata/
 # Secrets
 .env
 .env.local
+backend/.env
+web/.env.local
 
 # Fastlane
 fastlane/report.xml

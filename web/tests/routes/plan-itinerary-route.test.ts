@@ -180,6 +180,64 @@ describe("POST /api/plan-itinerary", () => {
     expect(response.headers.get("X-Request-Id")).toBe(BACKEND_REQUEST_ID);
   });
 
+  it("rate limits repeated requests from the same client", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            destination: "Paris",
+            morning: { title: "Morning", activities: [] },
+            afternoon: { title: "Afternoon", activities: [] },
+            evening: { title: "Evening", activities: [] },
+            notes: [],
+            request_id: BACKEND_REQUEST_ID
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "X-Request-Id": BACKEND_REQUEST_ID
+            }
+          }
+        )
+      )
+    );
+
+    const { POST } = await loadRouteModule();
+    for (let index = 0; index < 20; index++) {
+      const response = await POST(
+        buildRequest({
+          destination: "Paris",
+          prompt: "Plan a relaxed day",
+          preferences: [],
+          saved_places: []
+        })
+      );
+      expect(response.status).toBe(200);
+    }
+
+    const rateLimitedResponse = await POST(
+      buildRequest({
+        destination: "Paris",
+        prompt: "Plan a relaxed day",
+        preferences: [],
+        saved_places: []
+      })
+    );
+    const payload = await rateLimitedResponse.json();
+
+    expect(rateLimitedResponse.status).toBe(429);
+    expect(payload).toEqual({
+      error: {
+        code: "rate_limited",
+        message: "Too many requests. Please try again shortly.",
+        request_id: REQUEST_ID
+      }
+    });
+    expect(rateLimitedResponse.headers.get("X-Request-Id")).toBe(REQUEST_ID);
+    expect(fetchSpy).toHaveBeenCalledTimes(20);
+  });
+
   it("returns a clean timeout error when the backend does not respond in time", async () => {
     vi.useFakeTimers();
     vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {

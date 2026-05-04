@@ -5,6 +5,8 @@ const BACKEND_SHARED_SECRET = process.env.CITYSCOUT_APP_SHARED_SECRET?.trim();
 const REQUEST_ID_HEADER = "X-Request-Id";
 const APP_SECRET_HEADER = "X-CityScout-App-Secret";
 const DEFAULT_TIMEOUT_MS = 20_000;
+const WEB_PROXY_MAX_REQUESTS = 20;
+const WEB_PROXY_WINDOW_MS = 10 * 60 * 1000;
 
 export interface ProxyErrorBody {
   error: {
@@ -21,6 +23,51 @@ export interface RouteContext {
   method: "POST";
   requestBody: unknown;
   requestId?: string;
+}
+
+class InMemoryRateLimiter {
+  constructor(
+    private readonly maxRequests: number,
+    private readonly windowMilliseconds: number
+  ) {}
+
+  private readonly hits = new Map<string, number[]>();
+
+  allow(key: string, now: number = Date.now()) {
+    const cutoff = now - this.windowMilliseconds;
+    const entries = this.hits.get(key)?.filter((timestamp) => timestamp >= cutoff) ?? [];
+    if (entries.length >= this.maxRequests) {
+      this.hits.set(key, entries);
+      return false;
+    }
+
+    entries.push(now);
+    this.hits.set(key, entries);
+    return true;
+  }
+}
+
+const webProxyRateLimiter = new InMemoryRateLimiter(WEB_PROXY_MAX_REQUESTS, WEB_PROXY_WINDOW_MS);
+
+export function enforceWebProxyRateLimit(request: NextRequest, requestId: string, backendPath: string) {
+  const clientKey = `${backendPath}:${resolveClientIdentifier(request)}`;
+  if (!webProxyRateLimiter.allow(clientKey)) {
+    return Response.json(
+      {
+        error: {
+          code: "rate_limited",
+          message: "Too many requests. Please try again shortly.",
+          request_id: requestId
+        }
+      },
+      {
+        status: 429,
+        headers: responseHeaders(requestId)
+      }
+    );
+  }
+
+  return null;
 }
 
 export async function proxyJsonToBackend({ request, backendPath, method, requestBody, requestId }: RouteContext) {
@@ -262,6 +309,28 @@ function responseHeaders(requestId?: string) {
     headers.set(REQUEST_ID_HEADER, requestId);
   }
   return headers;
+}
+
+function resolveClientIdentifier(request: NextRequest) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const firstForwardedAddress = forwardedFor.split(",")[0]?.trim();
+    if (firstForwardedAddress) {
+      return firstForwardedAddress;
+    }
+  }
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) {
+    return realIp;
+  }
+
+  const connectingIp = request.headers.get("cf-connecting-ip")?.trim();
+  if (connectingIp) {
+    return connectingIp;
+  }
+
+  return "unknown";
 }
 
 function codeFromStatus(status: number) {

@@ -6,6 +6,9 @@ except ImportError:  # pragma: no cover - allows fallback behavior in local test
     APIConnectionError = APITimeoutError = APIStatusError = Exception
     OpenAI = None
 
+from fastapi import HTTPException
+from starlette.status import HTTP_502_BAD_GATEWAY, HTTP_503_SERVICE_UNAVAILABLE
+
 from app.core.config import settings
 from app.schemas.guide import GuideMessageRequest, GuideMessageResponse
 
@@ -61,10 +64,25 @@ def generate_guide_reply(request: GuideMessageRequest) -> GuideMessageResponse:
         )
     except RuntimeError:
         logger.error("Guide generation failed category=config_error destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _fallback_guide_reply(destination)
+        raise
     except APITimeoutError:
         logger.error("Guide generation failed category=openai_timeout destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _fallback_guide_reply(destination)
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Guide generation is temporarily unavailable.",
+        )
     except APIConnectionError:
         logger.error("Guide generation failed category=openai_connection_error destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _fallback_guide_reply(destination)
+        raise HTTPException(
+            status_code=HTTP_502_BAD_GATEWAY,
+            detail="Guide generation is temporarily unavailable.",
+        )
     except APIStatusError as error:
         logger.error(
             "Guide generation failed category=openai_status_error destination=%s status=%s request_id=%s",
@@ -72,10 +90,25 @@ def generate_guide_reply(request: GuideMessageRequest) -> GuideMessageResponse:
             error.status_code,
             getattr(error, "request_id", None),
         )
+        if _should_use_mock_fallback():
+            return _fallback_guide_reply(destination)
+        raise HTTPException(
+            status_code=HTTP_502_BAD_GATEWAY,
+            detail="Guide generation is temporarily unavailable.",
+        )
     except ValueError:
         logger.error("Guide generation failed category=empty_response destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _fallback_guide_reply(destination)
+        raise HTTPException(
+            status_code=HTTP_502_BAD_GATEWAY,
+            detail="Guide generation returned an invalid response.",
+        )
     except Exception:
         logger.exception("Guide generation failed category=unexpected destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _fallback_guide_reply(destination)
+        raise
 
     return _fallback_guide_reply(destination)
 
@@ -103,3 +136,7 @@ def _fallback_guide_reply(destination: str) -> GuideMessageResponse:
         ),
         suggested_prompts=DEFAULT_PROMPTS,
     )
+
+
+def _should_use_mock_fallback() -> bool:
+    return settings.app_env() in {"development", "test"}

@@ -174,3 +174,25 @@ def test_guide_message_returns_fallback_when_openai_client_fails(
     assert payload["suggested_prompts"]
     assert "Paris" in payload["reply"]
     assert isinstance(payload["request_id"], str)
+
+
+def test_guide_message_returns_upstream_error_in_production_when_openai_client_fails(
+    client,
+    auth_headers,
+    monkeypatch,
+) -> None:
+    fake_error, fake_client = _fake_openai_failure()
+    monkeypatch.setattr(guide_service.settings, "app_env", lambda: "production")
+    monkeypatch.setattr(guide_service.settings, "require_app_shared_secret", lambda: "test-secret")
+    monkeypatch.setattr(guide_service, "APITimeoutError", fake_error)
+    monkeypatch.setattr(guide_service, "OpenAI", fake_client)
+    monkeypatch.setattr(guide_service.settings, "require_openai_api_key", lambda: "test-key")
+
+    response = client.post("/guide/message", json=_valid_guide_payload(), headers=auth_headers)
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["error"]["code"] == "SERVICE_UNAVAILABLE"
+    assert payload["error"]["message"] == "Guide generation is temporarily unavailable."
+    assert isinstance(payload["request_id"], str)
+    assert response.headers["X-Request-Id"] == payload["request_id"]

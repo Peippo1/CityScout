@@ -7,6 +7,9 @@ except ImportError:  # pragma: no cover - allows fallback behavior in local test
     APIConnectionError = APITimeoutError = APIStatusError = Exception
     OpenAI = None
 
+from fastapi import HTTPException
+from starlette.status import HTTP_502_BAD_GATEWAY, HTTP_503_SERVICE_UNAVAILABLE
+
 from app.core.config import settings
 from app.schemas.itinerary import ItineraryBlock, ItineraryRequest, ItineraryResponse
 
@@ -59,10 +62,25 @@ def generate_itinerary(request: ItineraryRequest) -> ItineraryResponse:
         return _parse_itinerary_response(content, destination)
     except RuntimeError:
         logger.error("Itinerary generation failed category=config_error destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _generate_fallback_itinerary(request)
+        raise
     except APITimeoutError:
         logger.error("Itinerary generation failed category=openai_timeout destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _generate_fallback_itinerary(request)
+        raise HTTPException(
+            status_code=HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Itinerary generation is temporarily unavailable.",
+        )
     except APIConnectionError:
         logger.error("Itinerary generation failed category=openai_connection_error destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _generate_fallback_itinerary(request)
+        raise HTTPException(
+            status_code=HTTP_502_BAD_GATEWAY,
+            detail="Itinerary generation is temporarily unavailable.",
+        )
     except APIStatusError as error:
         logger.error(
             "Itinerary generation failed category=openai_status_error destination=%s status=%s request_id=%s",
@@ -70,10 +88,25 @@ def generate_itinerary(request: ItineraryRequest) -> ItineraryResponse:
             error.status_code,
             getattr(error, "request_id", None),
         )
+        if _should_use_mock_fallback():
+            return _generate_fallback_itinerary(request)
+        raise HTTPException(
+            status_code=HTTP_502_BAD_GATEWAY,
+            detail="Itinerary generation is temporarily unavailable.",
+        )
     except (json.JSONDecodeError, ValueError):
         logger.error("Itinerary generation failed category=invalid_json destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _generate_fallback_itinerary(request)
+        raise HTTPException(
+            status_code=HTTP_502_BAD_GATEWAY,
+            detail="Itinerary generation returned an invalid response.",
+        )
     except Exception:
         logger.exception("Itinerary generation failed category=unexpected destination=%s", destination)
+        if _should_use_mock_fallback():
+            return _generate_fallback_itinerary(request)
+        raise
 
     return _generate_fallback_itinerary(request)
 
@@ -156,6 +189,10 @@ def _normalize_preferences(preferences: list[str]) -> list[str]:
         if normalized and normalized not in ordered_unique:
             ordered_unique.append(normalized)
     return ordered_unique
+
+
+def _should_use_mock_fallback() -> bool:
+    return settings.app_env() in {"development", "test"}
 
 
 def _morning_opening(destination: str, preferences: list[str], prompt: str) -> str:

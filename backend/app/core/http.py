@@ -37,9 +37,11 @@ def get_request_id(request: Request) -> str:
 def error_code_for_status(status_code: int) -> str:
     mapping = {
         HTTPStatus.UNAUTHORIZED: "UNAUTHORIZED",
+        HTTPStatus.BAD_GATEWAY: "BAD_GATEWAY",
         HTTPStatus.REQUEST_ENTITY_TOO_LARGE: "PAYLOAD_TOO_LARGE",
         HTTPStatus.TOO_MANY_REQUESTS: "RATE_LIMITED",
         HTTPStatus.INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
+        HTTPStatus.SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
         HTTPStatus.BAD_REQUEST: "BAD_REQUEST",
         HTTPStatus.FORBIDDEN: "FORBIDDEN",
         HTTPStatus.NOT_FOUND: "NOT_FOUND",
