@@ -76,10 +76,50 @@ describe("POST /api/plan-itinerary", () => {
     );
     const payload = await response.json();
 
-    expect(response.status).toBe(422);
+    expect(response.status).toBe(400);
     expect(payload.error.code).toBe("validation_error");
     expect(payload.error.message).toMatch(/expected shape/i);
     expect(payload.error.request_id).toBe(REQUEST_ID);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized payloads before calling the backend", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { POST } = await loadRouteModule();
+
+    const response = await POST(
+      buildRequest({
+        destination: "Paris",
+        prompt: "x".repeat(20_000),
+        preferences: [],
+        saved_places: []
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(payload.error.code).toBe("payload_too_large");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid day_count values", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { POST } = await loadRouteModule();
+
+    const response = await POST(
+      buildRequest({
+        destination: "Paris",
+        prompt: "Plan a relaxed day",
+        preferences: [],
+        saved_places: [],
+        day_count: 30
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe("validation_error");
+    expect(payload.error.message).toMatch(/day_count/i);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -180,6 +220,38 @@ describe("POST /api/plan-itinerary", () => {
     expect(response.headers.get("X-Request-Id")).toBe(BACKEND_REQUEST_ID);
   });
 
+  it("does not expose raw HTML when upstream returns an HTML error page", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<html><body><h1>Service Unavailable</h1></body></html>", {
+        status: 503,
+        headers: {
+          "content-type": "text/html",
+          "X-Request-Id": BACKEND_REQUEST_ID
+        }
+      })
+    );
+
+    const { POST } = await loadRouteModule();
+    const response = await POST(
+      buildRequest({
+        destination: "Paris",
+        prompt: "Plan a relaxed day",
+        preferences: [],
+        saved_places: []
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({
+      error: {
+        code: "internal_error",
+        message: "Request failed with status 503.",
+        request_id: BACKEND_REQUEST_ID
+      }
+    });
+  });
+
   it("rate limits repeated requests from the same client", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(() =>
       Promise.resolve(
@@ -204,7 +276,7 @@ describe("POST /api/plan-itinerary", () => {
     );
 
     const { POST } = await loadRouteModule();
-    for (let index = 0; index < 20; index++) {
+    for (let index = 0; index < 10; index++) {
       const response = await POST(
         buildRequest({
           destination: "Paris",
@@ -230,12 +302,13 @@ describe("POST /api/plan-itinerary", () => {
     expect(payload).toEqual({
       error: {
         code: "rate_limited",
-        message: "Too many requests. Please try again shortly.",
+        message: "Too many requests. Please retry in about 600 seconds.",
         request_id: REQUEST_ID
       }
     });
+    expect(rateLimitedResponse.headers.get("Retry-After")).toBe("600");
     expect(rateLimitedResponse.headers.get("X-Request-Id")).toBe(REQUEST_ID);
-    expect(fetchSpy).toHaveBeenCalledTimes(20);
+    expect(fetchSpy).toHaveBeenCalledTimes(10);
   });
 
   it("returns a clean timeout error when the backend does not respond in time", async () => {
@@ -294,6 +367,30 @@ describe("POST /api/plan-itinerary", () => {
       error: {
         code: "proxy_misconfigured",
         message: "CITYSCOUT_API_BASE_URL is not configured.",
+        request_id: REQUEST_ID
+      }
+    });
+  });
+
+  it("returns a structured JSON error when the shared secret is unavailable", async () => {
+    delete process.env.CITYSCOUT_APP_SHARED_SECRET;
+
+    const { POST } = await loadRouteModule();
+    const response = await POST(
+      buildRequest({
+        destination: "Paris",
+        prompt: "Plan a relaxed day",
+        preferences: [],
+        saved_places: []
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(payload).toEqual({
+      error: {
+        code: "proxy_misconfigured",
+        message: "CITYSCOUT_APP_SHARED_SECRET is not configured.",
         request_id: REQUEST_ID
       }
     });

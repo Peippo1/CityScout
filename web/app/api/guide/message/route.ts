@@ -2,6 +2,11 @@ import { type NextRequest } from "next/server";
 import { enforceWebProxyRateLimit, proxyJsonToBackend } from "@/app/api/_lib/proxy";
 import type { GuideMessageRequest } from "@/types/guide";
 
+const MAX_BODY_BYTES = 12 * 1024;
+const MAX_DESTINATION_LENGTH = 80;
+const MAX_PROMPT_LENGTH = 1000;
+const MAX_CONTEXT_ITEMS = 20;
+
 function isGuideMessageRequest(value: unknown): value is GuideMessageRequest {
   if (!isRecord(value)) {
     return false;
@@ -22,7 +27,7 @@ function normalizeRequest(value: unknown): GuideMessageRequest | null {
       .filter((item): item is string => typeof item === "string")
       .map((item) => item.trim())
       .filter(Boolean)
-      .slice(0, 20)
+      .slice(0, MAX_CONTEXT_ITEMS)
   };
 }
 
@@ -31,6 +36,25 @@ export async function POST(request: NextRequest) {
   const rateLimitError = enforceWebProxyRateLimit(request, requestId, "/guide/message");
   if (rateLimitError) {
     return rateLimitError;
+  }
+
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return Response.json(
+      {
+        error: {
+          code: "payload_too_large",
+          message: "Request body is too large. Reduce payload size and retry.",
+          request_id: requestId
+        }
+      },
+      {
+        status: 413,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
   }
 
   let parsedBody: unknown;
@@ -65,7 +89,7 @@ export async function POST(request: NextRequest) {
         }
       },
       {
-        status: 422,
+        status: 400,
         headers: {
           "X-Request-Id": requestId
         }
@@ -73,7 +97,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (normalized.destination.length > 80 || normalized.message.length > 1000) {
+  const serializedLength = new TextEncoder().encode(JSON.stringify(normalized)).length;
+  if (serializedLength > MAX_BODY_BYTES) {
+    return Response.json(
+      {
+        error: {
+          code: "payload_too_large",
+          message: "Request body is too large. Reduce payload size and retry.",
+          request_id: requestId
+        }
+      },
+      {
+        status: 413,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
+  }
+
+  if (normalized.destination.length > MAX_DESTINATION_LENGTH || normalized.message.length > MAX_PROMPT_LENGTH) {
     return Response.json(
       {
         error: {
@@ -83,7 +126,7 @@ export async function POST(request: NextRequest) {
         }
       },
       {
-        status: 422,
+        status: 400,
         headers: {
           "X-Request-Id": requestId
         }

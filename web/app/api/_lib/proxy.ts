@@ -5,8 +5,9 @@ const BACKEND_SHARED_SECRET = process.env.CITYSCOUT_APP_SHARED_SECRET?.trim();
 const REQUEST_ID_HEADER = "X-Request-Id";
 const APP_SECRET_HEADER = "X-CityScout-App-Secret";
 const DEFAULT_TIMEOUT_MS = 20_000;
-const WEB_PROXY_MAX_REQUESTS = 20;
 const WEB_PROXY_WINDOW_MS = 10 * 60 * 1000;
+const PLAN_ROUTE_MAX_REQUESTS = 10;
+const GUIDE_ROUTE_MAX_REQUESTS = 30;
 
 export interface ProxyErrorBody {
   error: {
@@ -38,31 +39,42 @@ class InMemoryRateLimiter {
     const entries = this.hits.get(key)?.filter((timestamp) => timestamp >= cutoff) ?? [];
     if (entries.length >= this.maxRequests) {
       this.hits.set(key, entries);
-      return false;
+      const oldest = entries[0] ?? now;
+      const retryAfterMilliseconds = Math.max(0, oldest + this.windowMilliseconds - now);
+      return {
+        allowed: false,
+        retryAfterSeconds: Math.max(1, Math.ceil(retryAfterMilliseconds / 1000))
+      };
     }
 
     entries.push(now);
     this.hits.set(key, entries);
-    return true;
+    return {
+      allowed: true as const,
+      retryAfterSeconds: 0
+    };
   }
 }
 
-const webProxyRateLimiter = new InMemoryRateLimiter(WEB_PROXY_MAX_REQUESTS, WEB_PROXY_WINDOW_MS);
-
 export function enforceWebProxyRateLimit(request: NextRequest, requestId: string, backendPath: string) {
+  const limitConfig = rateLimitConfigForPath(backendPath);
   const clientKey = `${backendPath}:${resolveClientIdentifier(request)}`;
-  if (!webProxyRateLimiter.allow(clientKey)) {
+  const result = limitConfig.limiter.allow(clientKey);
+  if (!result.allowed) {
+    const retryAfter = String(Math.max(1, result.retryAfterSeconds));
     return Response.json(
       {
         error: {
           code: "rate_limited",
-          message: "Too many requests. Please try again shortly.",
+          message: `Too many requests. Please retry in about ${retryAfter} seconds.`,
           request_id: requestId
         }
       },
       {
         status: 429,
-        headers: responseHeaders(requestId)
+        headers: responseHeaders(requestId, {
+          "Retry-After": retryAfter
+        })
       }
     );
   }
@@ -240,6 +252,14 @@ async function readResponsePayload(response: Response) {
 
 function normalizeErrorBody(status: number, payload: unknown, requestId: string) {
   if (typeof payload === "string" && payload.trim()) {
+    if (looksLikeHtml(payload)) {
+      return {
+        code: codeFromStatus(status),
+        message: `Request failed with status ${status}.`,
+        request_id: requestId
+      };
+    }
+
     return {
       code: codeFromStatus(status),
       message: payload.trim(),
@@ -301,10 +321,15 @@ function normalizeSuccessBody(payload: unknown, requestId: string) {
   return normalized;
 }
 
-function responseHeaders(requestId?: string) {
+function responseHeaders(requestId?: string, extras?: Record<string, string>) {
   const headers = new Headers();
   headers.set("Cache-Control", "no-store");
   headers.set("X-Content-Type-Options", "nosniff");
+  if (extras) {
+    for (const [key, value] of Object.entries(extras)) {
+      headers.set(key, value);
+    }
+  }
   if (requestId) {
     headers.set(REQUEST_ID_HEADER, requestId);
   }
@@ -325,11 +350,6 @@ function resolveClientIdentifier(request: NextRequest) {
     return realIp;
   }
 
-  const connectingIp = request.headers.get("cf-connecting-ip")?.trim();
-  if (connectingIp) {
-    return connectingIp;
-  }
-
   return "unknown";
 }
 
@@ -337,6 +357,8 @@ function codeFromStatus(status: number) {
   switch (status) {
     case 400:
       return "invalid_request";
+    case 408:
+      return "upstream_timeout";
     case 401:
       return "unauthorized";
     case 403:
@@ -368,4 +390,21 @@ function asString(value: unknown, fallback: string) {
 
 function asOptionalString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function looksLikeHtml(value: string) {
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.startsWith("<!doctype html") || trimmed.startsWith("<html") || trimmed.includes("<body");
+}
+
+const routeRateLimiters = {
+  "/plan-itinerary": new InMemoryRateLimiter(PLAN_ROUTE_MAX_REQUESTS, WEB_PROXY_WINDOW_MS),
+  "/guide/message": new InMemoryRateLimiter(GUIDE_ROUTE_MAX_REQUESTS, WEB_PROXY_WINDOW_MS),
+  default: new InMemoryRateLimiter(GUIDE_ROUTE_MAX_REQUESTS, WEB_PROXY_WINDOW_MS)
+} as const;
+
+function rateLimitConfigForPath(path: string) {
+  return {
+    limiter: routeRateLimiters[path as keyof typeof routeRateLimiters] ?? routeRateLimiters.default
+  };
 }

@@ -2,6 +2,14 @@ import { type NextRequest } from "next/server";
 import { enforceWebProxyRateLimit, proxyJsonToBackend } from "@/app/api/_lib/proxy";
 import type { PlanItineraryRequest } from "@/types/itinerary";
 
+const MAX_BODY_BYTES = 16 * 1024;
+const MAX_DESTINATION_LENGTH = 80;
+const MAX_PROMPT_LENGTH = 1000;
+const MAX_INTERESTS = 10;
+const MAX_INTEREST_LENGTH = 60;
+const MAX_SAVED_PLACES = 25;
+const MAX_DAY_COUNT = 14;
+
 function methodNotAllowedResponse(requestId: string) {
   return Response.json(
     {
@@ -38,19 +46,22 @@ function normalizeRequest(value: unknown): PlanItineraryRequest | null {
     return null;
   }
 
+  const rawDayCount = value.day_count;
+  const dayCount =
+    typeof rawDayCount === "number" && Number.isInteger(rawDayCount) ? rawDayCount : undefined;
+
   return {
     destination: value.destination.trim(),
     prompt: value.prompt.trim(),
     preferences: value.preferences
       .filter((item): item is string => typeof item === "string")
       .map((item) => item.trim())
-      .filter(Boolean)
-      .slice(0, 10),
+      .filter(Boolean),
     saved_places: value.saved_places
       .filter((item): item is string => typeof item === "string")
       .map((item) => item.trim())
-      .filter(Boolean)
-      .slice(0, 25)
+      .filter(Boolean),
+    ...(dayCount !== undefined ? { day_count: dayCount } : {})
   };
 }
 
@@ -59,6 +70,25 @@ export async function POST(request: NextRequest) {
   const rateLimitError = enforceWebProxyRateLimit(request, requestId, "/plan-itinerary");
   if (rateLimitError) {
     return rateLimitError;
+  }
+
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return Response.json(
+      {
+        error: {
+          code: "payload_too_large",
+          message: "Request body is too large. Reduce payload size and retry.",
+          request_id: requestId
+        }
+      },
+      {
+        status: 413,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
   }
 
   let parsedBody: unknown;
@@ -93,7 +123,7 @@ export async function POST(request: NextRequest) {
         }
       },
       {
-        status: 422,
+        status: 400,
         headers: {
           "X-Request-Id": requestId
         }
@@ -101,7 +131,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (normalized.destination.length > 80 || normalized.prompt.length > 1000) {
+  const serializedLength = new TextEncoder().encode(JSON.stringify(normalized)).length;
+  if (serializedLength > MAX_BODY_BYTES) {
+    return Response.json(
+      {
+        error: {
+          code: "payload_too_large",
+          message: "Request body is too large. Reduce payload size and retry.",
+          request_id: requestId
+        }
+      },
+      {
+        status: 413,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
+  }
+
+  if (normalized.destination.length > MAX_DESTINATION_LENGTH || normalized.prompt.length > MAX_PROMPT_LENGTH) {
     return Response.json(
       {
         error: {
@@ -111,7 +160,79 @@ export async function POST(request: NextRequest) {
         }
       },
       {
-        status: 422,
+        status: 400,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
+  }
+
+  if (normalized.day_count !== undefined && (normalized.day_count < 1 || normalized.day_count > MAX_DAY_COUNT)) {
+    return Response.json(
+      {
+        error: {
+          code: "validation_error",
+          message: `day_count must be between 1 and ${MAX_DAY_COUNT}.`,
+          request_id: requestId
+        }
+      },
+      {
+        status: 400,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
+  }
+
+  if (normalized.preferences.length > MAX_INTERESTS) {
+    return Response.json(
+      {
+        error: {
+          code: "validation_error",
+          message: `preferences must contain at most ${MAX_INTERESTS} items.`,
+          request_id: requestId
+        }
+      },
+      {
+        status: 400,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
+  }
+
+  if (normalized.preferences.some((item) => item.length > MAX_INTEREST_LENGTH)) {
+    return Response.json(
+      {
+        error: {
+          code: "validation_error",
+          message: `Each preference must be at most ${MAX_INTEREST_LENGTH} characters.`,
+          request_id: requestId
+        }
+      },
+      {
+        status: 400,
+        headers: {
+          "X-Request-Id": requestId
+        }
+      }
+    );
+  }
+
+  if (normalized.saved_places.length > MAX_SAVED_PLACES) {
+    return Response.json(
+      {
+        error: {
+          code: "validation_error",
+          message: `saved_places must contain at most ${MAX_SAVED_PLACES} items.`,
+          request_id: requestId
+        }
+      },
+      {
+        status: 400,
         headers: {
           "X-Request-Id": requestId
         }

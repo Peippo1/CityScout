@@ -3,6 +3,7 @@ export interface PlanItineraryRequest {
   prompt: string;
   preferences: string[];
   saved_places: string[];
+  day_count?: number;
 }
 
 export type TravelStyleValue = "relaxed" | "food-forward" | "culture" | "neighborhoods" | "night-out";

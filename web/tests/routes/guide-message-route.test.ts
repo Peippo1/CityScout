@@ -94,6 +94,42 @@ describe("POST /api/guide/message", () => {
     expect(response.headers.get("X-Request-Id")).toBe(BACKEND_REQUEST_ID);
   });
 
+  it("rejects invalid payloads before calling the backend", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { POST } = await loadRouteModule();
+
+    const response = await POST(
+      buildRequest({
+        destination: " ",
+        message: " ",
+        context: []
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error.code).toBe("validation_error");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized payloads before calling the backend", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const { POST } = await loadRouteModule();
+
+    const response = await POST(
+      buildRequest({
+        destination: "Paris",
+        message: "x".repeat(20_000),
+        context: []
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(payload.error.code).toBe("payload_too_large");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("rate limits repeated requests from the same client", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(() =>
       Promise.resolve(
@@ -116,7 +152,7 @@ describe("POST /api/guide/message", () => {
     );
 
     const { POST } = await loadRouteModule();
-    for (let index = 0; index < 20; index++) {
+    for (let index = 0; index < 30; index++) {
       const response = await POST(
         buildRequest({
           destination: "Paris",
@@ -140,10 +176,70 @@ describe("POST /api/guide/message", () => {
     expect(payload).toEqual({
       error: {
         code: "rate_limited",
-        message: "Too many requests. Please try again shortly.",
+        message: "Too many requests. Please retry in about 600 seconds.",
         request_id: REQUEST_ID
       }
     });
+    expect(rateLimitedResponse.headers.get("Retry-After")).toBe("600");
     expect(rateLimitedResponse.headers.get("X-Request-Id")).toBe(REQUEST_ID);
+  });
+
+  it("returns a clean timeout error when the backend does not respond in time", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+      const signal = init?.signal as AbortSignal | undefined;
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener("abort", () => {
+          reject(new DOMException("Request aborted", "AbortError"));
+        });
+      });
+    });
+
+    const { POST } = await loadRouteModule();
+    const responsePromise = POST(
+      buildRequest({
+        destination: "Paris",
+        message: "Give me a short walking tour",
+        context: []
+      })
+    );
+
+    await vi.advanceTimersByTimeAsync(20_000);
+    const response = await responsePromise;
+    const payload = await response.json();
+
+    expect(response.status).toBe(504);
+    expect(payload).toEqual({
+      error: {
+        code: "upstream_timeout",
+        message: "The backend request timed out.",
+        request_id: REQUEST_ID
+      }
+    });
+    expect(response.headers.get("X-Request-Id")).toBe(REQUEST_ID);
+    vi.useRealTimers();
+  });
+
+  it("returns a structured JSON error when the backend URL is unavailable", async () => {
+    delete process.env.CITYSCOUT_API_BASE_URL;
+
+    const { POST } = await loadRouteModule();
+    const response = await POST(
+      buildRequest({
+        destination: "Paris",
+        message: "Give me a short walking tour",
+        context: []
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(payload).toEqual({
+      error: {
+        code: "proxy_misconfigured",
+        message: "CITYSCOUT_API_BASE_URL is not configured.",
+        request_id: REQUEST_ID
+      }
+    });
   });
 });
