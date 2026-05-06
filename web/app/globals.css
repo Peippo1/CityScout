@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: light;
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-editorial: "Iowan Old Style", Baskerville, Georgia, serif;
 }
 
 html {

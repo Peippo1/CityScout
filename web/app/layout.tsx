@@ -1,18 +1,6 @@
 import type { Metadata } from "next";
-import { Baskervville, Inter } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
-
-const editorial = Baskervville({
-  subsets: ["latin"],
-  variable: "--font-editorial",
-  weight: ["400"]
-});
-
-const sans = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans"
-});
 
 export const metadata: Metadata = {
   title: "CityScout Web",
@@ -25,7 +13,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${editorial.variable} ${sans.variable}`}>
+    <html lang="en">
       <body>{children}</body>
     </html>
   );
