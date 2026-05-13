@@ -138,6 +138,27 @@ npm run build
 xcodebuild -project CityScout.xcodeproj -scheme CityScout -configuration Debug -sdk iphonesimulator -destination "generic/platform=iOS Simulator" clean build
 ```
 
+## AI-assisted development
+
+This repository uses Claude Code and similar tools for AI-assisted engineering. The following documents govern how AI tooling should interact with the codebase:
+
+| Document | Purpose |
+| --- | --- |
+| [CLAUDE.md](./CLAUDE.md) | Repository-wide engineering instructions: rules, testing expectations, security constraints, definition of done |
+| [AGENTS.md](./AGENTS.md) | Catalogue of current and planned AI agents/services, interaction principles, guardrails, and cost awareness |
+| [.ai/skills/](./.ai/skills/) | Focused reusable skill documents for common tasks |
+
+### Available skills
+
+| Skill | When to use |
+| --- | --- |
+| [nextjs-api-routes.md](./.ai/skills/nextjs-api-routes.md) | Adding or modifying a web proxy route handler |
+| [proxy-security.md](./.ai/skills/proxy-security.md) | Security review of the web-to-backend proxy layer |
+| [testing-standards.md](./.ai/skills/testing-standards.md) | Writing or reviewing tests across all three surfaces |
+| [ux-polish.md](./.ai/skills/ux-polish.md) | Building or refining web UI to the CityScout design standard |
+| [deployment-checklist.md](./.ai/skills/deployment-checklist.md) | Pre-merge and pre-deploy verification |
+| [fastapi-integration.md](./.ai/skills/fastapi-integration.md) | Adding routes, services, or schemas to the backend |
+
 ## License
 
 CityScout is proprietary and not open source. See [LICENSE](./LICENSE) for the full restricted terms.
