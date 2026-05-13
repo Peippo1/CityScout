@@ -7,6 +7,7 @@ import { travelStyles } from "@/lib/site-content";
 import { Surface } from "@/components/surface";
 import { SaveItineraryButton } from "@/components/save-itinerary-button";
 import { LocalIntelligence } from "@/components/local-intelligence";
+import { HistoryMythology } from "@/components/history-mythology";
 import type { ItineraryBlock, ItineraryStop, PlanItineraryResponse } from "@/types/itinerary";
 
 const DEFAULT_DESTINATION = "Paris";
@@ -411,6 +412,7 @@ function GeneratedItinerary({
       ) : null}
 
       <LocalIntelligence destination={itinerary.destination} />
+      <HistoryMythology destination={itinerary.destination} />
     </div>
   );
 }

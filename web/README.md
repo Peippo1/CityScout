@@ -134,6 +134,29 @@ web/
 - Proxy routes enforce per-IP rate limits, request-size caps, payload validation, and upstream timeouts, and always return concise JSON errors.
 - Current per-IP limits (10-minute window): `/api/plan-itinerary` = 10 requests, `/api/guide/message` = 30 requests.
 
+## Contextual layers
+
+### Local Intelligence
+
+Destination-specific practical tips — cultural norms, transport, food notes, and local advice — rendered at the bottom of every generated itinerary.
+
+- Seed data: `web/lib/local-intelligence/seed.ts` (10 cities)
+- Matcher: `getIntelligence(destination)` — case-insensitive, alias-aware, returns `null` for unknown cities
+- Component: `LocalIntelligence` — renders grouped tips; omits itself if no data
+
+### History & Mythology
+
+Curated narrative context — myths, historical events, landmark stories — with optional recommended reading. Designed to feel like a thoughtful travel companion, not an encyclopaedia.
+
+- Seed data: `web/lib/history-mythology/seed.ts`
+- Currently covers: Athens · Acropolis · Ancient Agora · Paros · Naxos · Marathon
+- Matcher: `getHistoryMythology(place)` — matches cities and named landmarks; `getHistoryMythologyForPlaces(places[])` collects entries for an itinerary stop list
+- Component: `HistoryMythology` — renders story cards by category (Mythology, History, This place, Culture) and a Recommended Reading panel; omits itself if no data
+
+**Seed-data architecture:** Both layers use the same pattern — a typed seed array, a case-insensitive matcher, and a React component that renders `null` for unknown destinations. Adding a new city means adding one entry to the seed file. No build step or API call needed.
+
+**Future AI-extension path:** Either matcher can be replaced with an async function that calls a CityScout backend endpoint. The component interface stays identical — swap `getHistoryMythology(destination)` for `await fetchHistoryMythology(destination)` and the rendering layer is untouched.
+
 ## Manual Verification
 
 Use these steps when you want to verify the `/plan` flow in the browser:
