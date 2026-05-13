@@ -100,6 +100,18 @@ With `npm run dev` running in `web/`, run these checks:
 5. Misconfigured env guard:
    unset `CITYSCOUT_API_BASE_URL` or `CITYSCOUT_APP_SHARED_SECRET` and confirm `500` JSON error from the proxy route.
 
+## Public alpha behaviour
+
+CityScout is in public alpha. The `/plan` page displays a notice banner reminding users that itineraries are AI-assisted and should be checked before travel.
+
+Additional alpha-mode behaviour:
+
+- **Friendly errors** — rate limits, backend timeouts, and service unavailability all show calm, readable messages. Raw error codes are written to the browser console only.
+- **Copy itinerary** — a "Copy itinerary" button appears after generation, writing a plain-text version of the plan to the clipboard.
+- **Polished loading state** — while generating, the panel cycles through progress messages ("Building your city plan…", "Checking route flow…", "Adding practical travel notes…") with a simple step indicator.
+
+No auth, no payment, and no new external services are required for any of these behaviours.
+
 ## Testing
 
 The web app now has a minimal test baseline:
