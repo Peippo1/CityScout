@@ -27,7 +27,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Set `CITYSCOUT_API_BASE_URL` in `web/.env.local` to the CityScout backend URL. The app runs at `http://localhost:3000`.
+Copy `.env.example` to `.env.local` and fill in your values. The app runs at `http://localhost:3000`.
 
 ## Vercel Deployment
 
@@ -37,13 +37,29 @@ Create a new Vercel project for this repository and use these project settings:
 - Install Command: `npm install`
 - Build Command: `npm run build`
 
-Add this environment variable in Vercel before deploying:
+Add these environment variables in Vercel before deploying:
 
-- `CITYSCOUT_API_BASE_URL`: your deployed CityScout backend URL, for example `https://your-render-backend-url.onrender.com` (server-only)
-- `CITYSCOUT_APP_SHARED_SECRET`: shared proxy secret expected by the Render backend (server-only)
+**Server-only (do not prefix with `NEXT_PUBLIC_`):**
 
-Do not expose these variables in browser JavaScript. Keep both as server-side Vercel environment variables only.
+- `CITYSCOUT_API_BASE_URL` — deployed CityScout backend URL (e.g. `https://your-backend.onrender.com`)
+- `CITYSCOUT_APP_SHARED_SECRET` — shared proxy secret matching the backend
+
+**Browser-safe (Supabase public values):**
+
+- `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL (Settings → API)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — your Supabase anon key (Settings → API)
+
+The Supabase anon key is designed to be public — Row Level Security policies control data access, not the key itself. The backend secret and API base URL must remain server-side only.
+
 Vercel Authentication can be disabled only after API rate limiting is active for `/api/plan-itinerary` and `/api/guide/message`.
+
+## Supabase Setup
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In Authentication → URL Configuration, add your deployed Vercel URL as a Redirect URL: `https://your-app.vercel.app/auth/callback`.
+3. For local development, also add `http://localhost:3000/auth/callback`.
+4. Magic link (passwordless email) is enabled by default — no extra configuration needed.
+5. Copy `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from Settings → API.
 
 ## Structure
 

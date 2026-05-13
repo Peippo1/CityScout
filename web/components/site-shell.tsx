@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { AuthNav } from "@/components/auth-nav";
 
 type SiteShellProps = {
   children: ReactNode;
@@ -35,6 +37,13 @@ export function SiteShell({ children, compact = false }: SiteShellProps) {
             >
               Plan
             </Link>
+            <Suspense
+              fallback={
+                <div className="h-9 w-20 animate-pulse rounded-full border border-city-border bg-white/60" />
+              }
+            >
+              <AuthNav />
+            </Suspense>
           </nav>
         </div>
       </header>
