@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { fetchSavedItineraries } from "@/lib/supabase/queries";
 import { SiteShell } from "@/components/site-shell";
 import { Surface } from "@/components/surface";
 import { SavedItineraryList } from "./saved-itinerary-list";
-import type { SavedItineraryRow } from "@/types/saved-itinerary";
 
 export const metadata: Metadata = {
   title: "Saved itineraries — CityScout"
@@ -20,17 +20,7 @@ export default async function SavedPage() {
     redirect("/auth/sign-in?next=/saved");
   }
 
-  const { data, error } = await supabase
-    .from("saved_itineraries")
-    .select("id, destination, title, summary, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("[CityScout] Load saved itineraries error:", error.message);
-  }
-
-  const items: SavedItineraryRow[] = data ?? [];
+  const items = await fetchSavedItineraries(supabase, user.id);
 
   return (
     <SiteShell compact>

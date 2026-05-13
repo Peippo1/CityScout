@@ -65,20 +65,47 @@ Vercel Authentication can be disabled only after API rate limiting is active for
 
 Run the schema SQL in the Supabase SQL Editor (**SQL Editor → New query**):
 
-```bash
-# File is at:
+```text
 web/supabase/schema.sql
 ```
 
-This creates:
+The file is idempotent and safe to re-run. It creates or migrates the `saved_itineraries` table.
 
-- `saved_itineraries` table with `id`, `user_id`, `destination`, `title`, `summary`, `payload` (jsonb), and `created_at`
-- Row Level Security (RLS) enabled — users can only read, insert, and delete their own rows
-- A performance index on `(user_id, created_at desc)`
+### Table: `saved_itineraries`
 
-The schema SQL is idempotent (`IF NOT EXISTS` throughout) and safe to re-run.
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key, auto-generated |
+| `user_id` | `uuid` | FK → `auth.users`, cascades on delete |
+| `destination` | `text` | City name, for list display |
+| `title` | `text` | Short itinerary title |
+| `summary` | `text?` | Optional one-line description |
+| `raw_response` | `jsonb` | Full `PlanItineraryResponse` from the backend |
+| `structured_itinerary_json` | `jsonb?` | Normalised display format (portable for iOS sync) |
+| `created_at` | `timestamptz` | Set on insert |
+| `updated_at` | `timestamptz` | Auto-updated by trigger on each `UPDATE` |
 
-**RLS is required.** The web app uses the public anon key with user sessions — without RLS, any authenticated user could read any row.
+### RLS policies
+
+| Policy | Operation | Rule |
+| --- | --- | --- |
+| `users_select_own` | SELECT | `auth.uid() = user_id` |
+| `users_insert_own` | INSERT | `auth.uid() = user_id` (with check) |
+| `users_delete_own` | DELETE | `auth.uid() = user_id` |
+
+**RLS is required.** The web app uses the public anon key with authenticated sessions — without RLS, any signed-in user could read any row. Our Server Actions also filter by `user_id` as belt-and-suspenders.
+
+### Migrating from v1 schema
+
+If you ran the previous schema (which had a `payload` column instead of `raw_response`), re-running `schema.sql` will rename the column and add the missing fields automatically. No manual data migration is needed.
+
+### Local development flow
+
+1. Install [Supabase CLI](https://supabase.com/docs/guides/cli): `brew install supabase/tap/supabase`
+2. `supabase login` and link to your project.
+3. Or use the hosted Supabase SQL Editor for one-off runs of `schema.sql`.
+4. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `web/.env.local`.
+5. Run `npm run dev` — auth and saved itineraries will work against your Supabase project.
 
 ## Structure
 

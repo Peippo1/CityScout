@@ -4,6 +4,8 @@ import { useOptimistic, useTransition, useState } from "react";
 import Link from "next/link";
 import { deleteItinerary } from "@/app/actions/itineraries";
 import { SavedItineraryCard } from "@/components/saved-itinerary-card";
+import { Toast } from "@/components/toast";
+import { useToast } from "@/hooks/use-toast";
 import type { SavedItineraryRow } from "@/types/saved-itinerary";
 
 type Props = {
@@ -12,7 +14,7 @@ type Props = {
 
 export function SavedItineraryList({ initialItems }: Props) {
   const [, startTransition] = useTransition();
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { toast, showToast, dismiss } = useToast();
 
   const [optimisticItems, removeOptimistic] = useOptimistic(
     initialItems,
@@ -21,13 +23,13 @@ export function SavedItineraryList({ initialItems }: Props) {
   );
 
   function handleDelete(id: string) {
-    setDeleteError(null);
     startTransition(async () => {
       removeOptimistic(id);
       try {
         await deleteItinerary(id);
+        showToast("Itinerary deleted.", "success");
       } catch {
-        setDeleteError("Could not delete the itinerary. Please try again.");
+        showToast("Could not delete the itinerary. Please try again.", "error");
       }
     });
   }
@@ -37,16 +39,21 @@ export function SavedItineraryList({ initialItems }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      {deleteError ? (
-        <div className="rounded-2xl border border-rose-300 bg-rose-50/80 px-4 py-3 text-sm text-rose-900/80">
-          {deleteError}
-        </div>
+    <>
+      <div className="space-y-4">
+        {optimisticItems.map((item) => (
+          <SavedItineraryCard key={item.id} item={item} onDelete={handleDelete} />
+        ))}
+      </div>
+      {toast ? (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          toastKey={toast.key}
+          onDismiss={dismiss}
+        />
       ) : null}
-      {optimisticItems.map((item) => (
-        <SavedItineraryCard key={item.id} item={item} onDelete={handleDelete} />
-      ))}
-    </div>
+    </>
   );
 }
 

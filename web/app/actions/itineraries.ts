@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { PlanItineraryResponse } from "@/types/itinerary";
+import type { PlanItineraryResponse, ItineraryStop } from "@/types/itinerary";
+import type { StructuredItinerary, StructuredStop } from "@/types/saved-itinerary";
 
 export interface SaveItineraryResult {
   id: string;
@@ -27,7 +28,8 @@ export async function saveItinerary(
       destination: itinerary.destination,
       title: itinerary.title ?? itinerary.destination,
       summary: itinerary.summary ?? null,
-      payload: itinerary as unknown as Record<string, unknown>
+      raw_response: itinerary as unknown as Record<string, unknown>,
+      structured_itinerary_json: buildStructuredItinerary(itinerary)
     })
     .select("id")
     .single();
@@ -63,4 +65,57 @@ export async function deleteItinerary(id: string): Promise<void> {
   }
 
   revalidatePath("/saved");
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+function buildStructuredItinerary(
+  itinerary: PlanItineraryResponse
+): StructuredItinerary {
+  const stops: StructuredStop[] =
+    itinerary.stops && itinerary.stops.length > 0
+      ? itinerary.stops.map(toStructuredStop)
+      : legacyBlocksToStructuredStops(itinerary);
+
+  return {
+    destination: itinerary.destination,
+    title: itinerary.title ?? itinerary.destination,
+    summary: itinerary.summary ?? null,
+    stops,
+    notes: itinerary.notes ?? []
+  };
+}
+
+function toStructuredStop(stop: ItineraryStop): StructuredStop {
+  return {
+    id: stop.id,
+    name: stop.name,
+    timeLabel: stop.time_label,
+    category: stop.category,
+    description: stop.description,
+    mapped: stop.latitude !== null && stop.longitude !== null
+  };
+}
+
+function legacyBlocksToStructuredStops(
+  itinerary: PlanItineraryResponse
+): StructuredStop[] {
+  const blocks: Array<[string, string[]]> = [
+    ["Morning", itinerary.morning?.activities ?? []],
+    ["Afternoon", itinerary.afternoon?.activities ?? []],
+    ["Evening", itinerary.evening?.activities ?? []]
+  ];
+
+  return blocks.flatMap(([timeLabel, activities], blockIndex) =>
+    activities.map((activity, activityIndex) => ({
+      id: `${timeLabel.toLowerCase()}-${blockIndex}-${activityIndex}`,
+      name: activity,
+      timeLabel,
+      category: "planned stop",
+      description: activity,
+      mapped: false
+    }))
+  );
 }

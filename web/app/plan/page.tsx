@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SiteShell } from "@/components/site-shell";
 import { PlanWorkspace } from "@/components/plan-workspace";
 import { createClient } from "@/lib/supabase/server";
+import { fetchSavedItinerary } from "@/lib/supabase/queries";
 import type { PlanItineraryResponse } from "@/types/itinerary";
 
 export const metadata: Metadata = {
@@ -24,16 +25,10 @@ export default async function PlanPage({ searchParams }: PlanPageProps) {
   let initialSavedId: string | null = null;
 
   if (id && user) {
-    const { data } = await supabase
-      .from("saved_itineraries")
-      .select("id, payload")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (data) {
-      initialItinerary = data.payload as PlanItineraryResponse;
-      initialSavedId = data.id;
+    const saved = await fetchSavedItinerary(supabase, id, user.id);
+    if (saved) {
+      initialItinerary = saved.raw_response;
+      initialSavedId = saved.id;
     }
   }
 
