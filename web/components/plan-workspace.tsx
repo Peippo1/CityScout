@@ -5,9 +5,11 @@ import { ApiError, planItinerary } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { travelStyles } from "@/lib/site-content";
 import { Surface } from "@/components/surface";
+import { SaveItineraryButton } from "@/components/save-itinerary-button";
 import type { ItineraryBlock, ItineraryStop, PlanItineraryResponse } from "@/types/itinerary";
 
-const initialDestination = "Paris";
+const DEFAULT_DESTINATION = "Paris";
+const DEFAULT_NOTES = "Coffee, art, and an easy walk with a few good food stops.";
 const initialStyle = travelStyles[0]?.value ?? "relaxed";
 type TravelStyleValue = (typeof travelStyles)[number]["value"];
 
@@ -26,14 +28,30 @@ type DisplayStop = {
   mapped: boolean;
 };
 
-export function PlanWorkspace() {
-  const [destination, setDestination] = useState(initialDestination);
+type PlanWorkspaceProps = {
+  userId?: string | null;
+  initialItinerary?: PlanItineraryResponse | null;
+  initialSavedId?: string | null;
+};
+
+export function PlanWorkspace({
+  userId = null,
+  initialItinerary = null,
+  initialSavedId = null
+}: PlanWorkspaceProps) {
+  const [destination, setDestination] = useState(
+    initialItinerary?.destination ?? DEFAULT_DESTINATION
+  );
   const [style, setStyle] = useState<TravelStyleValue>(initialStyle);
-  const [notes, setNotes] = useState("Coffee, art, and an easy walk with a few good food stops.");
-  const [itinerary, setItinerary] = useState<PlanItineraryResponse | null>(null);
+  const [notes, setNotes] = useState(DEFAULT_NOTES);
+  const [itinerary, setItinerary] = useState<PlanItineraryResponse | null>(initialItinerary);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [requestId, setRequestId] = useState<string | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(
+    initialItinerary?.request_id ?? null
+  );
+  // Track the saved-itinerary id so the save button can show the right state.
+  const [savedId, setSavedId] = useState<string | null>(initialSavedId);
 
   const selectedStyle = useMemo(
     () => travelStyles.find((option) => option.value === style) ?? travelStyles[0],
@@ -57,6 +75,7 @@ export function PlanWorkspace() {
 
     setLoading(true);
     setErrorMessage(null);
+    setSavedId(null); // new generation — clear any saved state
 
     try {
       const response = await planItinerary({
@@ -89,14 +108,20 @@ export function PlanWorkspace() {
   return (
     <div className="space-y-8">
       <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-sm leading-6 text-amber-900/80">
-        CityScout is in public alpha. Itineraries are AI-assisted and should be checked before travel.
+        CityScout is in public alpha. Itineraries are AI-assisted and should be checked before
+        travel.
       </div>
 
       <div className="grid gap-8 xl:grid-cols-[0.88fr_1.12fr]">
-        <Surface title="Trip details" description="Destination, travel style, and the note that should shape the day.">
+        <Surface
+          title="Trip details"
+          description="Destination, travel style, and the note that should shape the day."
+        >
           <div className="space-y-5">
             <label className="block space-y-2">
-              <span className="text-xs uppercase tracking-[0.24em] text-city-muted">Destination</span>
+              <span className="text-xs uppercase tracking-[0.24em] text-city-muted">
+                Destination
+              </span>
               <input
                 value={destination}
                 onChange={(event) => setDestination(event.target.value)}
@@ -106,7 +131,9 @@ export function PlanWorkspace() {
             </label>
 
             <fieldset className="space-y-3">
-              <legend className="text-xs uppercase tracking-[0.24em] text-city-muted">Travel style</legend>
+              <legend className="text-xs uppercase tracking-[0.24em] text-city-muted">
+                Travel style
+              </legend>
               <div className="flex flex-wrap gap-2">
                 {travelStyles.map((option) => {
                   const active = option.value === style;
@@ -164,15 +191,27 @@ export function PlanWorkspace() {
           >
             <div className="space-y-5">
               {loading ? <LoadingState /> : null}
-              {!loading && errorMessage ? <ErrorState message={errorMessage} requestId={requestId} /> : null}
+              {!loading && errorMessage ? (
+                <ErrorState message={errorMessage} requestId={requestId} />
+              ) : null}
               {!loading && !errorMessage && !hasResults ? <EmptyState /> : null}
               {!loading && !errorMessage && hasResults ? (
-                <GeneratedItinerary itinerary={itinerary} requestId={requestId} displayStops={displayStops} />
+                <GeneratedItinerary
+                  itinerary={itinerary}
+                  requestId={requestId}
+                  displayStops={displayStops}
+                  userId={userId}
+                  savedId={savedId}
+                  onSaved={setSavedId}
+                />
               ) : null}
             </div>
           </Surface>
 
-          <Surface title="Map preview" description="A quiet placeholder for future markers and route overlays.">
+          <Surface
+            title="Map preview"
+            description="A quiet placeholder for future markers and route overlays."
+          >
             <div className="rounded-[24px] border border-city-border bg-white/55 p-5">
               <div className="grid min-h-[240px] gap-4 rounded-[20px] border border-dashed border-city-border bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(248,246,241,0.85))] p-4 sm:min-h-[300px]">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -184,7 +223,9 @@ export function PlanWorkspace() {
                       Saved places
                     </span>
                   </div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-city-muted">Markers ready</p>
+                  <p className="text-xs uppercase tracking-[0.22em] text-city-muted">
+                    Markers ready
+                  </p>
                 </div>
 
                 <div className="relative flex-1">
@@ -194,7 +235,13 @@ export function PlanWorkspace() {
                   <div className="absolute inset-y-5 left-3/4 w-px bg-city-border" />
 
                   {mapStops.map((stop, index) => (
-                    <div key={stop.id} className={cn("absolute flex items-center gap-2", mapMarkerPositionClass(index))}>
+                    <div
+                      key={stop.id}
+                      className={cn(
+                        "absolute flex items-center gap-2",
+                        mapMarkerPositionClass(index)
+                      )}
+                    >
                       <div
                         className={cn(
                           "h-3.5 w-3.5 rounded-full border bg-white shadow-[0_0_0_4px_rgba(17,17,17,0.05)]",
@@ -210,8 +257,8 @@ export function PlanWorkspace() {
               </div>
             </div>
             <p className="mt-4 max-w-xl text-sm leading-6 text-city-muted">
-              The layout is intentionally shaped for a future map SDK so markers can land without changing the page
-              rhythm.
+              The layout is intentionally shaped for a future map SDK so markers can land without
+              changing the page rhythm.
             </p>
           </Surface>
         </div>
@@ -223,11 +270,17 @@ export function PlanWorkspace() {
 function GeneratedItinerary({
   itinerary,
   requestId,
-  displayStops
+  displayStops,
+  userId,
+  savedId,
+  onSaved
 }: {
   itinerary: PlanItineraryResponse | null;
   requestId: string | null;
   displayStops: DisplayStop[];
+  userId: string | null;
+  savedId: string | null;
+  onSaved: (id: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -237,12 +290,15 @@ function GeneratedItinerary({
 
   function handleCopy() {
     const text = buildItineraryText(itinerary!, displayStops);
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      // clipboard unavailable — silently skip
-    });
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // clipboard unavailable — silently skip
+      });
   }
 
   const groups = groupStopsByPeriod(displayStops);
@@ -251,17 +307,29 @@ function GeneratedItinerary({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-city-border pb-4">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.24em] text-city-muted">Generated itinerary</p>
+          <p className="text-xs uppercase tracking-[0.24em] text-city-muted">
+            Generated itinerary
+          </p>
           <p className="text-sm text-city-muted">
             {itinerary.destination}
-            {requestId ? <span className="ml-3 text-city-ink/70">Request {requestId}</span> : null}
+            {requestId ? (
+              <span className="ml-3 text-city-ink/70">Request {requestId}</span>
+            ) : null}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="text-right text-xs uppercase tracking-[0.22em] text-city-muted">
-            {itinerary.generated_at ? <p>{formatGeneratedAt(itinerary.generated_at)}</p> : null}
+            {itinerary.generated_at ? (
+              <p>{formatGeneratedAt(itinerary.generated_at)}</p>
+            ) : null}
             <p>{displayStops.length} stops</p>
           </div>
+          <SaveItineraryButton
+            itinerary={itinerary}
+            userId={userId}
+            savedId={savedId}
+            onSaved={onSaved}
+          />
           <button
             type="button"
             onClick={handleCopy}
@@ -275,14 +343,24 @@ function GeneratedItinerary({
       <div className="space-y-0">
         {groups.map(({ period, stops: periodStops }, groupIndex) => (
           <Fragment key={period}>
-            <div className={cn("pb-1", groupIndex > 0 && "border-t border-city-border pt-5 mt-1")}>
+            <div
+              className={cn(
+                "pb-1",
+                groupIndex > 0 && "mt-1 border-t border-city-border pt-5"
+              )}
+            >
               <p className="text-xs uppercase tracking-[0.24em] text-city-muted">{period}</p>
             </div>
             {periodStops.map((stop) => (
-              <article key={stop.id} className="border-t border-city-border py-4 first:border-t-0 first:pt-0">
+              <article
+                key={stop.id}
+                className="border-t border-city-border py-4 first:border-t-0 first:pt-0"
+              >
                 <div className="grid gap-3 sm:grid-cols-[0.22fr_1fr] sm:gap-5">
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-[0.22em] text-city-muted">{stop.timeLabel}</p>
+                    <p className="text-xs uppercase tracking-[0.22em] text-city-muted">
+                      {stop.timeLabel}
+                    </p>
                     <h3 className="text-lg font-medium text-city-ink">{stop.name}</h3>
                   </div>
                   <div className="space-y-3">
@@ -301,7 +379,9 @@ function GeneratedItinerary({
                         {stop.mapped ? "Mapped" : "Unmatched"}
                       </span>
                     </div>
-                    <p className="max-w-3xl text-sm leading-6 text-city-muted">{stop.description}</p>
+                    <p className="max-w-3xl text-sm leading-6 text-city-muted">
+                      {stop.description}
+                    </p>
                   </div>
                 </div>
               </article>
@@ -385,7 +465,11 @@ function ErrorState({ message, requestId }: { message: string; requestId: string
     <div className="rounded-3xl border border-rose-300 bg-rose-50/80 p-6">
       <p className="text-sm font-medium text-rose-950">Could not generate itinerary</p>
       <p className="mt-2 text-sm leading-6 text-rose-900/80">{message}</p>
-      {requestId ? <p className="mt-2 text-xs uppercase tracking-[0.22em] text-rose-900/60">Request {requestId}</p> : null}
+      {requestId ? (
+        <p className="mt-2 text-xs uppercase tracking-[0.22em] text-rose-900/60">
+          Request {requestId}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -396,14 +480,17 @@ function EmptyState() {
       <div className="rounded-3xl border border-dashed border-city-border bg-white/55 p-6">
         <p className="text-sm font-medium text-city-ink">No itinerary generated yet</p>
         <p className="mt-2 text-sm leading-6 text-city-muted">
-          Enter a city, choose a travel style, and generate a draft to see a timeline and route preview.
+          Enter a city, choose a travel style, and generate a draft to see a timeline and route
+          preview.
         </p>
       </div>
       <div className="grid gap-3">
         {["Morning", "Afternoon", "Evening"].map((slot) => (
           <div key={slot} className="rounded-2xl border border-city-border bg-white/55 p-4">
             <p className="text-sm font-medium text-city-ink">{slot}</p>
-            <p className="mt-1 text-sm text-city-muted">Timeline cards will appear here once a plan is generated.</p>
+            <p className="mt-1 text-sm text-city-muted">
+              Timeline cards will appear here once a plan is generated.
+            </p>
           </div>
         ))}
       </div>
@@ -411,9 +498,10 @@ function EmptyState() {
   );
 }
 
-function groupStopsByPeriod(stops: DisplayStop[]): Array<{ period: string; stops: DisplayStop[] }> {
+function groupStopsByPeriod(
+  stops: DisplayStop[]
+): Array<{ period: string; stops: DisplayStop[] }> {
   const groups: Array<{ period: string; stops: DisplayStop[] }> = [];
-
   for (const stop of stops) {
     const last = groups[groups.length - 1];
     if (last && last.period === stop.timeLabel) {
@@ -422,19 +510,14 @@ function groupStopsByPeriod(stops: DisplayStop[]): Array<{ period: string; stops
       groups.push({ period: stop.timeLabel, stops: [stop] });
     }
   }
-
   return groups;
 }
 
 function buildDisplayStops(itinerary: PlanItineraryResponse | null): DisplayStop[] {
-  if (!itinerary) {
-    return [];
-  }
-
+  if (!itinerary) return [];
   if (itinerary.stops && itinerary.stops.length > 0) {
-    return itinerary.stops.map((stop) => toDisplayStop(stop));
+    return itinerary.stops.map(toDisplayStop);
   }
-
   return legacyBlocksToDisplayStops(itinerary);
 }
 
@@ -455,7 +538,6 @@ function legacyBlocksToDisplayStops(itinerary: PlanItineraryResponse): DisplaySt
     ["Afternoon", itinerary.afternoon],
     ["Evening", itinerary.evening]
   ];
-
   return blocks.flatMap(([timeLabel, block], blockIndex) =>
     block.activities.map((activity, activityIndex) => ({
       id: `${timeLabel.toLowerCase()}-${blockIndex}-${activityIndex}`,
@@ -477,20 +559,13 @@ function mapMarkerPositionClass(index: number) {
     "left-[20%] top-[70%]",
     "left-[44%] top-[58%]"
   ];
-
   return positions[index % positions.length];
 }
 
 function formatGeneratedAt(value: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short"
-  });
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function friendlyApiError(error: ApiError): string {
@@ -509,30 +584,25 @@ function friendlyApiError(error: ApiError): string {
   return "Something went wrong generating your itinerary. Please try again.";
 }
 
-function buildItineraryText(itinerary: PlanItineraryResponse, stops: DisplayStop[]): string {
+function buildItineraryText(
+  itinerary: PlanItineraryResponse,
+  stops: DisplayStop[]
+): string {
   const lines: string[] = [];
-
   if (itinerary.title) lines.push(itinerary.title);
   if (itinerary.destination) lines.push(itinerary.destination);
   if (itinerary.summary) lines.push("", itinerary.summary);
-
   if (stops.length > 0) {
     lines.push("");
     for (const stop of stops) {
       lines.push(`${stop.timeLabel} — ${stop.name}`);
-      if (stop.description && stop.description !== stop.name) {
-        lines.push(stop.description);
-      }
+      if (stop.description && stop.description !== stop.name) lines.push(stop.description);
       lines.push("");
     }
   }
-
   if (itinerary.notes?.length > 0) {
     lines.push("Practical notes:");
-    for (const note of itinerary.notes) {
-      lines.push(`• ${note}`);
-    }
+    for (const note of itinerary.notes) lines.push(`• ${note}`);
   }
-
   return lines.join("\n").trim();
 }

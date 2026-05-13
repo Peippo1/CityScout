@@ -1,7 +1,42 @@
+import type { Metadata } from "next";
 import { SiteShell } from "@/components/site-shell";
 import { PlanWorkspace } from "@/components/plan-workspace";
+import { createClient } from "@/lib/supabase/server";
+import type { PlanItineraryResponse } from "@/types/itinerary";
 
-export default function PlanPage() {
+export const metadata: Metadata = {
+  title: "Plan — CityScout"
+};
+
+type PlanPageProps = {
+  searchParams: Promise<{ id?: string }>;
+};
+
+export default async function PlanPage({ searchParams }: PlanPageProps) {
+  const { id } = await searchParams;
+
+  const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  let initialItinerary: PlanItineraryResponse | null = null;
+  let initialSavedId: string | null = null;
+
+  if (id && user) {
+    const { data } = await supabase
+      .from("saved_itineraries")
+      .select("id, payload")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (data) {
+      initialItinerary = data.payload as PlanItineraryResponse;
+      initialSavedId = data.id;
+    }
+  }
+
   return (
     <SiteShell compact>
       <section className="py-10 sm:py-12">
@@ -11,12 +46,17 @@ export default function PlanPage() {
             Shape a city day before you leave.
           </h1>
           <p className="max-w-xl text-base leading-7 text-city-muted">
-            Build a day around pace, notes, and a travel style, then read the plan as a simple sequence of stops.
+            Build a day around pace, notes, and a travel style, then read the plan as a simple
+            sequence of stops.
           </p>
         </div>
       </section>
 
-      <PlanWorkspace />
+      <PlanWorkspace
+        userId={user?.id ?? null}
+        initialItinerary={initialItinerary}
+        initialSavedId={initialSavedId}
+      />
     </SiteShell>
   );
 }

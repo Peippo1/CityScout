@@ -56,10 +56,29 @@ Vercel Authentication can be disabled only after API rate limiting is active for
 ## Supabase Setup
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In Authentication → URL Configuration, add your deployed Vercel URL as a Redirect URL: `https://your-app.vercel.app/auth/callback`.
+2. In **Authentication → URL Configuration**, add your deployed Vercel URL as a Redirect URL: `https://your-app.vercel.app/auth/callback`.
 3. For local development, also add `http://localhost:3000/auth/callback`.
 4. Magic link (passwordless email) is enabled by default — no extra configuration needed.
-5. Copy `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from Settings → API.
+5. Copy `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from **Settings → API**.
+
+## Database Setup
+
+Run the schema SQL in the Supabase SQL Editor (**SQL Editor → New query**):
+
+```bash
+# File is at:
+web/supabase/schema.sql
+```
+
+This creates:
+
+- `saved_itineraries` table with `id`, `user_id`, `destination`, `title`, `summary`, `payload` (jsonb), and `created_at`
+- Row Level Security (RLS) enabled — users can only read, insert, and delete their own rows
+- A performance index on `(user_id, created_at desc)`
+
+The schema SQL is idempotent (`IF NOT EXISTS` throughout) and safe to re-run.
+
+**RLS is required.** The web app uses the public anon key with user sessions — without RLS, any authenticated user could read any row.
 
 ## Structure
 

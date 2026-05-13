@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SiteShell } from "@/components/site-shell";
 import { Surface } from "@/components/surface";
+import { SavedItineraryList } from "./saved-itinerary-list";
+import type { SavedItineraryRow } from "@/types/saved-itinerary";
 
 export const metadata: Metadata = {
   title: "Saved itineraries — CityScout"
@@ -17,6 +19,18 @@ export default async function SavedPage() {
   if (!user) {
     redirect("/auth/sign-in?next=/saved");
   }
+
+  const { data, error } = await supabase
+    .from("saved_itineraries")
+    .select("id, destination, title, summary, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[CityScout] Load saved itineraries error:", error.message);
+  }
+
+  const items: SavedItineraryRow[] = data ?? [];
 
   return (
     <SiteShell compact>
@@ -35,21 +49,13 @@ export default async function SavedPage() {
 
       <Surface
         title="Saved itineraries"
-        description="Plans you have saved will appear here, ready to revisit or share."
+        description={
+          items.length > 0
+            ? `${items.length} saved ${items.length === 1 ? "itinerary" : "itineraries"}`
+            : "Plans you have saved will appear here, ready to revisit."
+        }
       >
-        <div className="rounded-3xl border border-dashed border-city-border bg-white/55 p-6">
-          <p className="text-sm font-medium text-city-ink">No saved itineraries yet</p>
-          <p className="mt-2 text-sm leading-6 text-city-muted">
-            Generate an itinerary on the{" "}
-            <a
-              href="/plan"
-              className="text-city-ink underline underline-offset-2 transition hover:opacity-70"
-            >
-              plan page
-            </a>{" "}
-            and save it to keep it here.
-          </p>
-        </div>
+        <SavedItineraryList initialItems={items} />
       </Surface>
     </SiteShell>
   );
