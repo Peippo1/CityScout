@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { ApiError, planItinerary } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { travelStyles } from "@/lib/site-content";
+import { travelStyles, explorationMoods, type ExplorationMoodValue } from "@/lib/site-content";
 import { Surface } from "@/components/surface";
 import { SaveItineraryButton } from "@/components/save-itinerary-button";
 import { LocalIntelligence } from "@/components/local-intelligence";
@@ -54,6 +54,7 @@ export function PlanWorkspace({
   );
   // Track the saved-itinerary id so the save button can show the right state.
   const [savedId, setSavedId] = useState<string | null>(initialSavedId);
+  const [explorationMood, setExplorationMood] = useState<ExplorationMoodValue | null>(null);
 
   const selectedStyle = useMemo(
     () => travelStyles.find((option) => option.value === style) ?? travelStyles[0],
@@ -85,7 +86,7 @@ export function PlanWorkspace({
         prompt:
           trimmedNotes ||
           `Plan a ${selectedStyle?.label.toLowerCase() ?? "relaxed"} day in ${trimmedDestination}.`,
-        preferences: [selectedStyle?.label ?? "Relaxed"],
+        preferences: buildPreferences(selectedStyle?.label, explorationMood),
         saved_places: []
       });
 
@@ -168,6 +169,37 @@ export function PlanWorkspace({
                 className="w-full resize-none rounded-2xl border border-city-border bg-white/75 px-4 py-3 text-base text-city-ink outline-none transition duration-150 ease-out placeholder:text-city-muted focus:border-city-ink/30 focus:bg-white focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background"
               />
             </label>
+
+            <fieldset className="space-y-3">
+              <legend className="text-xs uppercase tracking-[0.24em] text-city-muted">
+                Mood (optional)
+              </legend>
+              <div className="flex flex-wrap gap-2">
+                {explorationMoods.map((m) => {
+                  const active = m.value === explorationMood;
+                  return (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setExplorationMood(active ? null : m.value)}
+                      className={cn(
+                        "rounded-full border px-4 py-2 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background",
+                        active
+                          ? "border-city-ink bg-city-ink text-white"
+                          : "border-city-border bg-white/60 text-city-muted hover:border-city-ink/30 hover:text-city-ink"
+                      )}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {explorationMood ? (
+                <p className="text-sm leading-6 text-city-muted">
+                  {explorationMoods.find((m) => m.value === explorationMood)?.description}
+                </p>
+              ) : null}
+            </fieldset>
 
             <button
               type="button"
@@ -610,4 +642,16 @@ function buildItineraryText(
     for (const note of itinerary.notes) lines.push(`• ${note}`);
   }
   return lines.join("\n").trim();
+}
+
+function buildPreferences(
+  styleLabel: string | undefined,
+  mood: ExplorationMoodValue | null
+): string[] {
+  const prefs = [styleLabel ?? "Relaxed"];
+  if (mood) {
+    const entry = explorationMoods.find((m) => m.value === mood);
+    if (entry) prefs.push(entry.label);
+  }
+  return prefs;
 }

@@ -141,4 +141,52 @@ describe("PlanWorkspace", () => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledOnce();
     });
   });
+
+  // ---- Mood-Based Exploration presets ----
+
+  it("renders all 8 exploration mood chips", () => {
+    render(<PlanWorkspace />);
+    for (const label of ["Mythic", "Quiet", "Romantic", "Lively", "Slow travel", "Food focused", "Historical", "Sea view"]) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it("selects a mood chip on click and shows its description", () => {
+    render(<PlanWorkspace />);
+    fireEvent.click(screen.getByRole("button", { name: "Mythic" }));
+    expect(screen.getByRole("button", { name: "Mythic" })).toHaveClass("bg-city-ink");
+    expect(screen.getByText(/Ancient stories/i)).toBeInTheDocument();
+  });
+
+  it("deselects a mood chip on second click", () => {
+    render(<PlanWorkspace />);
+    fireEvent.click(screen.getByRole("button", { name: "Quiet" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quiet" }));
+    expect(screen.getByRole("button", { name: "Quiet" })).not.toHaveClass("bg-city-ink");
+    expect(screen.queryByText(/Fewer crowds/i)).not.toBeInTheDocument();
+  });
+
+  it("includes selected mood label in preferences when generating", async () => {
+    vi.mocked(planItinerary).mockResolvedValue(mockItinerary);
+    render(<PlanWorkspace />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Historical" }));
+    fireEvent.click(screen.getByRole("button", { name: /Generate itinerary/i }));
+
+    await waitFor(() => {
+      const call = vi.mocked(planItinerary).mock.calls[0][0];
+      expect(call.preferences).toContain("Historical");
+    });
+  });
+
+  it("mood selection persists after generate is clicked", async () => {
+    vi.mocked(planItinerary).mockReturnValue(new Promise(() => {}));
+    render(<PlanWorkspace />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Romantic" }));
+    fireEvent.click(screen.getByRole("button", { name: /Generate itinerary/i }));
+
+    // Mood chip should still be selected
+    expect(screen.getByRole("button", { name: "Romantic" })).toHaveClass("bg-city-ink");
+  });
 });
