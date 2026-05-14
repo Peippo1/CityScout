@@ -24,18 +24,23 @@ export function SavedItineraryCard({ item, onDelete, isDeleting = false }: Saved
             <p className="line-clamp-2 text-sm leading-6 text-city-muted">{item.summary}</p>
           ) : null}
         </div>
-
         <p className="shrink-0 text-xs uppercase tracking-[0.22em] text-city-muted">
           {formattedDate}
         </p>
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <Link
-          href={`/plan?id=${item.id}`}
+          href={`/saved/${item.id}`}
           className="rounded-full border border-city-ink bg-city-ink px-4 py-2 text-xs font-medium text-white transition duration-150 ease-out hover:bg-white hover:text-city-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background"
         >
-          Open
+          View &amp; journal
+        </Link>
+        <Link
+          href={`/plan?id=${item.id}`}
+          className="rounded-full border border-city-border bg-white/60 px-4 py-2 text-xs font-medium text-city-muted transition duration-150 ease-out hover:border-city-ink/30 hover:text-city-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background"
+        >
+          Reopen in planner
         </Link>
         <button
           type="button"

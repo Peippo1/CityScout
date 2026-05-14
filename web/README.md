@@ -99,6 +99,24 @@ The file is idempotent and safe to re-run. It creates or migrates the `saved_iti
 
 If you ran the previous schema (which had a `payload` column instead of `raw_response`), re-running `schema.sql` will rename the column and add the missing fields automatically. No manual data migration is needed.
 
+### Table: `journal_entries`
+
+Also run `web/supabase/journal-schema.sql` (after `schema.sql`):
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | Primary key |
+| `user_id` | `uuid` | FK → `auth.users`, cascades on delete |
+| `itinerary_id` | `uuid` | FK → `saved_itineraries`, cascades on delete |
+| `destination` | `text` | Denormalised city name |
+| `title` | `text?` | Optional short title |
+| `body` | `text` | Journal text (required) |
+| `mood` | `text?` | One of: `reflective`, `adventurous`, `relaxed`, `energetic`, `romantic`, `overwhelmed` |
+| `created_at` | `timestamptz` | Set on insert |
+| `updated_at` | `timestamptz` | Auto-updated by trigger |
+
+RLS policies: `journal_select_own`, `journal_insert_own`, `journal_update_own`, `journal_delete_own` — all enforce `auth.uid() = user_id`. Journal entries support UPDATE (for editing), unlike itineraries.
+
 ### Local development flow
 
 1. Install [Supabase CLI](https://supabase.com/docs/guides/cli): `brew install supabase/tap/supabase`
