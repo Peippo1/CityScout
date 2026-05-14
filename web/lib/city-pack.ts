@@ -11,6 +11,7 @@
 
 import { getIntelligence } from "@/lib/local-intelligence";
 import { getHistoryMythology } from "@/lib/history-mythology";
+import { getWalkingNarrative } from "@/lib/walking-narratives";
 import { CITYSCOUT_CONTENT_VERSION, type CityPack } from "@/types/offline";
 import type { StructuredItinerary } from "@/types/saved-itinerary";
 
@@ -24,6 +25,7 @@ export function buildCityPack(
     destination,
     intelligence: getIntelligence(destination),
     historyMythology: getHistoryMythology(destination),
+    walkingNarrative: getWalkingNarrative(destination),
     structuredItinerary: options.structuredItinerary ?? null
   };
 }

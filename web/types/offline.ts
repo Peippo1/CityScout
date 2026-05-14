@@ -14,6 +14,7 @@
 import type { DestinationIntelligence } from "@/types/local-intelligence";
 import type { PlaceHistoryMythology } from "@/types/history-mythology";
 import type { StructuredItinerary } from "@/types/saved-itinerary";
+import type { WalkingNarrative } from "@/types/walking-narrative";
 
 /** Monotonic content version. Bump when any seed data changes. */
 export const CITYSCOUT_CONTENT_VERSION = "1.0.0";
@@ -36,6 +37,7 @@ export interface CityPack {
   destination: string;
   intelligence: DestinationIntelligence | null;
   historyMythology: PlaceHistoryMythology | null;
+  walkingNarrative: WalkingNarrative | null;
   /** Null until the user has saved an itinerary for this destination. */
   structuredItinerary: StructuredItinerary | null;
 }
