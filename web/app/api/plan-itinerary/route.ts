@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { enforceWebProxyRateLimit, proxyJsonToBackend } from "@/app/api/_lib/proxy";
+import { log, hashIp, startTimer } from "@/lib/logger";
 import type { PlanItineraryRequest } from "@/types/itinerary";
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -66,9 +67,23 @@ function normalizeRequest(value: unknown): PlanItineraryRequest | null {
 }
 
 export async function POST(request: NextRequest) {
+  const elapsed = startTimer();
   const requestId = request.headers.get("X-Request-Id") ?? crypto.randomUUID();
+  const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? request.headers.get("x-real-ip")?.trim()
+    ?? "unknown";
+
   const rateLimitError = enforceWebProxyRateLimit(request, requestId, "/plan-itinerary");
   if (rateLimitError) {
+    log({
+      level: "warn",
+      route: "/api/plan-itinerary",
+      event: "rate_limited",
+      requestId,
+      status: 429,
+      clientHash: await hashIp(clientIp),
+      durationMs: elapsed()
+    });
     return rateLimitError;
   }
 
@@ -240,13 +255,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return proxyJsonToBackend({
+  const response = await proxyJsonToBackend({
     request,
     backendPath: "/plan-itinerary",
     method: "POST",
     requestBody: normalized,
     requestId
   });
+
+  log({
+    level: response.ok ? "info" : "warn",
+    route: "/api/plan-itinerary",
+    event: response.ok ? "generation_complete" : "upstream_error",
+    requestId,
+    status: response.status,
+    destination: normalized.destination,
+    durationMs: elapsed()
+  });
+
+  return response;
 }
 
 export async function GET(request: NextRequest) {

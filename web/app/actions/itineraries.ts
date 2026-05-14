@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { log } from "@/lib/logger";
 import type { PlanItineraryResponse, ItineraryStop } from "@/types/itinerary";
 import type { StructuredItinerary, StructuredStop } from "@/types/saved-itinerary";
 
@@ -35,10 +36,16 @@ export async function saveItinerary(
     .single();
 
   if (error) {
-    console.error("[CityScout] Save itinerary error:", error.message);
+    log({ level: "error", route: "saveItinerary", event: "save_failed", error: error.message });
     throw new Error("Could not save itinerary.");
   }
 
+  log({
+    level: "info",
+    route: "saveItinerary",
+    event: "save_complete",
+    destination: itinerary.destination
+  });
   revalidatePath("/saved");
   return { id: data.id };
 }
@@ -60,10 +67,11 @@ export async function deleteItinerary(id: string): Promise<void> {
     .eq("user_id", user.id); // belt-and-suspenders alongside RLS
 
   if (error) {
-    console.error("[CityScout] Delete itinerary error:", error.message);
+    log({ level: "error", route: "deleteItinerary", event: "delete_failed", error: error.message });
     throw new Error("Could not delete itinerary.");
   }
 
+  log({ level: "info", route: "deleteItinerary", event: "delete_complete" });
   revalidatePath("/saved");
 }
 

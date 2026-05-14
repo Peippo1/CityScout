@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { log } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -31,10 +32,16 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      log({ level: "info", route: "/auth/callback", event: "auth_callback_success" });
       return NextResponse.redirect(`${origin}${next}`);
     }
 
-    console.error("[CityScout] Auth callback exchange failed:", error.message);
+    log({
+      level: "error",
+      route: "/auth/callback",
+      event: "auth_callback_failed",
+      error: error.message
+    });
   }
 
   return NextResponse.redirect(`${origin}/auth/sign-in?error=callback_failed`);
