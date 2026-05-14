@@ -1,5 +1,8 @@
 import type { DestinationIntelligence } from "@/types/local-intelligence";
 
+/** Bump when any entry is added, removed, or substantively changed. */
+export const LOCAL_INTELLIGENCE_SEED_VERSION = "1.0.0";
+
 export const intelligenceSeed: DestinationIntelligence[] = [
   {
     destination: "Paris",

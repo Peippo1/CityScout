@@ -1,5 +1,8 @@
 import type { PlaceHistoryMythology } from "@/types/history-mythology";
 
+/** Bump when any story, headline, or reading entry is added, removed, or changed. */
+export const HISTORY_MYTHOLOGY_SEED_VERSION = "1.0.0";
+
 export const historyMythologySeed: PlaceHistoryMythology[] = [
   // -------------------------------------------------------------------------
   // Athens
