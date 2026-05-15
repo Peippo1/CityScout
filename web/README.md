@@ -7,8 +7,8 @@ This directory contains the Next.js planning surface for CityScout.
 - Next.js App Router
 - TypeScript
 - TailwindCSS
-- no auth yet
-- no database yet
+- Supabase Auth (magic link / email OTP)
+- Supabase Postgres (saved itineraries, journal entries)
 - browser calls local Next.js route handlers
 - typed API client forwards through the local proxy layer
 
@@ -48,6 +48,11 @@ Add these environment variables in Vercel before deploying:
 
 - `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL (Settings → API)
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — your Supabase anon key (Settings → API)
+
+**Optional (internal analytics):**
+
+- `SUPABASE_SERVICE_ROLE_KEY` — service role key from Settings → API. Server-side only. Required for `/internal/analytics`.
+- `INTERNAL_ALLOWED_EMAILS` — comma-separated list of emails allowed to access `/internal/analytics`. If unset, all authenticated users can access it.
 
 The Supabase anon key is designed to be public — Row Level Security policies control data access, not the key itself. The backend secret and API base URL must remain server-side only.
 
@@ -211,7 +216,7 @@ Additional alpha-mode behaviour:
 
 - **Friendly errors** — rate limits, backend timeouts, and service unavailability all show calm, readable messages. Raw error codes are written to the browser console only.
 - **Copy itinerary** — a "Copy itinerary" button appears after generation, writing a plain-text version of the plan to the clipboard.
-- **Polished loading state** — while generating, the panel cycles through progress messages ("Building your city plan…", "Checking route flow…", "Adding practical travel notes…") with a simple step indicator.
+- **Polished loading state** — while generating, the panel cycles through progress messages ("Building your city plan…", "Shaping the day…", "Adding practical travel notes…") with a simple step indicator.
 
 No auth, no payment, and no new external services are required for any of these behaviours.
 

@@ -9,11 +9,11 @@ const highlights = [
   },
   {
     title: "Stay local in the details",
-    description: "The web surface stays calm and readable so the plan feels like a curated note, not a dashboard."
+    description: "The planner stays calm and readable so the plan feels like a curated note, not a settings panel."
   },
   {
-    title: "Hand off to iOS when you travel",
-    description: "Planning lives on the web; the native app remains the companion once the day starts."
+    title: "Take it with you",
+    description: "Plans travel well. The companion app keeps the day close once you're on the ground."
   }
 ];
 
@@ -23,7 +23,7 @@ export default function HomePage() {
       <section className="grid gap-8 py-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-end lg:py-16">
         <div className="space-y-8">
           <div className="space-y-5">
-            <p className="text-xs uppercase tracking-[0.28em] text-city-muted">CityScout planning surface</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-city-muted">Before you arrive</p>
             <h1 className="max-w-3xl font-editorial text-5xl leading-[0.96] text-city-ink sm:text-6xl lg:text-7xl">
               Plan city days with the care of a good notebook.
             </h1>
@@ -41,7 +41,7 @@ export default function HomePage() {
               Start planning
             </Link>
             <p className="max-w-md text-sm leading-6 text-city-muted">
-              The web app is the planning layer. The iOS app remains the in-trip companion.
+              Plan before you go. Your phone takes over once you&apos;re there.
             </p>
           </div>
         </div>
@@ -50,7 +50,7 @@ export default function HomePage() {
           <div className="p-6 sm:p-7">
             <p className="text-xs uppercase tracking-[0.24em] text-city-muted">What it is</p>
             <h2 className="mt-3 max-w-md font-editorial text-3xl leading-tight text-city-ink sm:text-[2.2rem]">
-              A planning layer, not a duplicate app.
+              A quieter way to prepare.
             </h2>
           </div>
           <div className="divide-y divide-city-border border-y border-city-border">
