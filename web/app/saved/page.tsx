@@ -31,8 +31,7 @@ export default async function SavedPage() {
             Your itineraries.
           </h1>
           <p className="max-w-xl text-base leading-7 text-city-muted">
-            Itineraries you save from the planning surface will appear here, scoped to your
-            account.
+            Itineraries you&apos;ve saved will appear here, private to your account.
           </p>
         </div>
       </section>

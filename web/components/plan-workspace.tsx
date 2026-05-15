@@ -18,7 +18,7 @@ type TravelStyleValue = (typeof travelStyles)[number]["value"];
 
 const LOADING_STEPS = [
   "Building your city plan…",
-  "Checking route flow…",
+  "Shaping the day…",
   "Adding practical travel notes…"
 ];
 
@@ -223,7 +223,7 @@ export function PlanWorkspace({
             description={
               hasResults
                 ? itinerary?.summary ?? "Generated itinerary"
-                : "Generate a draft to see a simple timeline, routing notes, and map-ready placeholders."
+                : "Generate a draft to see a day take shape — stops, timing, and practical notes."
             }
           >
             <div className="space-y-5">
@@ -440,6 +440,11 @@ function GeneratedItinerary({
           </div>
         </div>
       ) : null}
+
+      <p className="text-xs leading-5 text-city-muted">
+        This is a starting point, not a fixed schedule. Plans naturally shift as you explore — treat
+        it as a thoughtful suggestion, not a timetable.
+      </p>
 
       <LocalIntelligence destination={itinerary.destination} />
       <HistoryMythology destination={itinerary.destination} />

@@ -28,8 +28,8 @@ export default function HomePage() {
               Plan city days with the care of a good notebook.
             </h1>
             <p className="max-w-2xl text-lg leading-8 text-city-muted sm:text-xl">
-              CityScout helps travelers plan city days and travel like a local with a calm, editorial surface
-              built for pre-trip thinking.
+              A calm, editorial surface built for pre-trip thinking — shaped around pace,
+              neighbourhoods, and the details that make a day worth remembering.
             </p>
           </div>
 
@@ -72,7 +72,7 @@ export default function HomePage() {
           {[
             ["Plan", "Draft a city day around pace, neighborhoods, and the places that matter."],
             ["Review", "Read the route as a sequence of stops, not as a dense settings panel."],
-            ["Share", "Move the plan between surfaces without exposing the whole native app."]
+            ["Share", "Keep the plan close. Move it to your phone when you're ready to leave."]
           ].map(([title, description]) => (
             <div key={title} className="border-t border-city-border pt-4">
               <p className="text-xs uppercase tracking-[0.24em] text-city-muted">{title}</p>
