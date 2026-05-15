@@ -39,22 +39,3 @@ export interface PlanItineraryResponse {
   notes: string[];
 }
 
-export interface DraftItineraryStop {
-  id: string;
-  name: string;
-  timeLabel: string;
-  category: string;
-  description: string;
-  latitude: number | null;
-  longitude: number | null;
-  matchedPoiId: string | null;
-  confidence: number | null;
-}
-
-export interface DraftItinerary {
-  destination: string;
-  title: string;
-  summary: string;
-  generatedAt: string;
-  stops: DraftItineraryStop[];
-}

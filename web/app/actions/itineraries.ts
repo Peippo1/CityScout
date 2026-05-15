@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { log } from "@/lib/logger";
 import type { PlanItineraryResponse, ItineraryStop } from "@/types/itinerary";
+import { STRUCTURED_ITINERARY_VERSION } from "@/types/saved-itinerary";
 import type { StructuredItinerary, StructuredStop } from "@/types/saved-itinerary";
 
 export interface SaveItineraryResult {
@@ -88,6 +89,7 @@ function buildStructuredItinerary(
       : legacyBlocksToStructuredStops(itinerary);
 
   return {
+    schemaVersion: STRUCTURED_ITINERARY_VERSION,
     destination: itinerary.destination,
     title: itinerary.title ?? itinerary.destination,
     summary: itinerary.summary ?? null,

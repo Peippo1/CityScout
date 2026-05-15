@@ -1,10 +1,13 @@
 import type { PlanItineraryResponse } from "@/types/itinerary";
 
 // -------------------------------------------------------
-// Normalised display format stored in structured_itinerary_json.
+// Canonical normalised format stored in structured_itinerary_json.
 // Decouples the render format from the backend contract so iOS
 // and future offline consumers can use this without parsing raw_response.
+// Bump STRUCTURED_ITINERARY_VERSION when the shape changes.
 // -------------------------------------------------------
+
+export const STRUCTURED_ITINERARY_VERSION = "1.0.0";
 
 export interface StructuredStop {
   id: string;
@@ -16,6 +19,8 @@ export interface StructuredStop {
 }
 
 export interface StructuredItinerary {
+  /** Schema version. Absent on rows saved before versioning was introduced. */
+  schemaVersion?: string;
   destination: string;
   title: string;
   summary: string | null;

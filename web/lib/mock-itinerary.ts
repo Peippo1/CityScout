@@ -1,4 +1,6 @@
-import type { DraftItinerary, DraftItineraryStop, TravelStyleValue } from "@/types/itinerary";
+import { STRUCTURED_ITINERARY_VERSION } from "@/types/saved-itinerary";
+import type { StructuredItinerary, StructuredStop } from "@/types/saved-itinerary";
+import type { TravelStyleValue } from "@/types/itinerary";
 
 function slugify(value: string) {
   return value
@@ -12,11 +14,11 @@ function buildStop(
   destination: string,
   style: TravelStyleValue,
   index: number,
-  timeLabel: DraftItineraryStop["timeLabel"],
+  timeLabel: string,
   name: string,
-  category: DraftItineraryStop["category"],
+  category: string,
   description: string
-): DraftItineraryStop {
+): StructuredStop {
   const prefix = `${slugify(destination) || "city"}-${style}-${index + 1}`;
 
   return {
@@ -25,14 +27,11 @@ function buildStop(
     timeLabel,
     category,
     description,
-    latitude: null,
-    longitude: null,
-    matchedPoiId: null,
-    confidence: null
+    mapped: false
   };
 }
 
-export function buildMockItinerary(destination: string, style: TravelStyleValue, notes: string): DraftItinerary {
+export function buildMockItinerary(destination: string, style: TravelStyleValue, notes: string): StructuredItinerary {
   const city = destination.trim() || "your city";
   const noteSnippet = notes.trim() || "a flexible city day";
   const title = `${city}: ${styleTitle(style)} day`;
@@ -45,11 +44,12 @@ export function buildMockItinerary(destination: string, style: TravelStyleValue,
   ];
 
   return {
+    schemaVersion: STRUCTURED_ITINERARY_VERSION,
     destination: city,
     title,
     summary: `A ${styleTitle(style).toLowerCase()} city day built around ${noteSnippet.toLowerCase()}.`,
-    generatedAt: new Date().toISOString(),
-    stops
+    stops,
+    notes: []
   };
 }
 
