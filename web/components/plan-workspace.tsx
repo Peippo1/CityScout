@@ -16,6 +16,17 @@ const DEFAULT_NOTES = "Coffee, art, and an easy walk with a few good food stops.
 const initialStyle = travelStyles[0]?.value ?? "relaxed";
 type TravelStyleValue = (typeof travelStyles)[number]["value"];
 
+const QUICK_STARTS = [
+  {
+    id: "athens",
+    label: "Plan an Athens day",
+    destination: "Athens",
+    style: "culture" as TravelStyleValue,
+    mood: "mythic" as ExplorationMoodValue,
+    notes: "Ancient history, mythology, and good food — with shade-aware pacing and comfortable walking distances."
+  }
+];
+
 const LOADING_STEPS = [
   "Building your city plan…",
   "Shaping the day…",
@@ -65,6 +76,16 @@ export function PlanWorkspace({
   const displayStops = useMemo(() => buildDisplayStops(itinerary), [itinerary]);
   const mapStops = displayStops.slice(0, 6);
   const hasResults = Boolean(itinerary);
+
+  function applyQuickStart(preset: (typeof QUICK_STARTS)[number]) {
+    setDestination(preset.destination);
+    setStyle(preset.style);
+    setNotes(preset.notes);
+    setExplorationMood(preset.mood);
+    setItinerary(null);
+    setErrorMessage(null);
+    setSavedId(null);
+  }
 
   async function handleGenerate() {
     const trimmedDestination = destination.trim();
@@ -116,6 +137,19 @@ export function PlanWorkspace({
         travel.
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {QUICK_STARTS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => applyQuickStart(preset)}
+            className="rounded-full border border-city-border bg-white/60 px-4 py-2.5 text-sm font-medium text-city-muted transition duration-150 ease-out hover:border-city-ink/30 hover:text-city-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background"
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-8 xl:grid-cols-[0.88fr_1.12fr]">
         <Surface
           title="Trip details"
@@ -148,7 +182,7 @@ export function PlanWorkspace({
                       aria-pressed={active ? "true" : "false"}
                       onClick={() => setStyle(option.value)}
                       className={cn(
-                        "rounded-full border px-4 py-2 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background",
+                        "min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background",
                         active
                           ? "border-city-ink bg-city-ink text-white"
                           : "border-city-border bg-white/60 text-city-muted hover:border-city-ink/30 hover:text-city-ink"
@@ -186,7 +220,7 @@ export function PlanWorkspace({
                       aria-pressed={active ? "true" : "false"}
                       onClick={() => setExplorationMood(active ? null : m.value)}
                       className={cn(
-                        "rounded-full border px-4 py-2 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background",
+                        "min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background",
                         active
                           ? "border-city-ink bg-city-ink text-white"
                           : "border-city-border bg-white/60 text-city-muted hover:border-city-ink/30 hover:text-city-ink"
@@ -343,7 +377,7 @@ function GeneratedItinerary({
           <p className="text-sm font-medium text-city-ink">
             {itinerary.destination}
             {requestId ? (
-              <span className="ml-3 text-city-ink/70">Request {requestId}</span>
+              <span className="ml-3 hidden text-city-ink/70 sm:inline">Request {requestId}</span>
             ) : null}
           </p>
         </div>
@@ -363,7 +397,7 @@ function GeneratedItinerary({
           <button
             type="button"
             onClick={handleCopy}
-            className="rounded-full border border-city-border bg-white/60 px-3 py-1.5 text-xs font-medium text-city-muted transition duration-150 ease-out hover:border-city-ink/30 hover:text-city-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background"
+            className="min-h-[40px] rounded-full border border-city-border bg-white/60 px-3 py-1.5 text-xs font-medium text-city-muted transition duration-150 ease-out hover:border-city-ink/30 hover:text-city-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background"
           >
             {copied ? "Copied" : "Copy itinerary"}
           </button>
@@ -400,7 +434,7 @@ function GeneratedItinerary({
                       </span>
                       <span
                         className={cn(
-                          "rounded-full px-3 py-1 text-xs font-medium",
+                          "hidden rounded-full px-3 py-1 text-xs font-medium sm:inline-block",
                           stop.mapped
                             ? "border border-city-ink/20 bg-city-ink text-white"
                             : "border border-city-border bg-white/60 text-city-muted"

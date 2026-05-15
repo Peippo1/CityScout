@@ -1,9 +1,28 @@
 import type { DestinationIntelligence } from "@/types/local-intelligence";
 
 /** Bump when any entry is added, removed, or substantively changed. */
-export const LOCAL_INTELLIGENCE_SEED_VERSION = "1.0.0";
+export const LOCAL_INTELLIGENCE_SEED_VERSION = "1.1.0";
 
 export const intelligenceSeed: DestinationIntelligence[] = [
+  // -------------------------------------------------------------------------
+  // Athens — first, for the live alpha trip
+  // -------------------------------------------------------------------------
+  {
+    destination: "Athens",
+    aliases: ["athens, greece", "athina", "athen"],
+    tips: [
+      { category: "practical", tip: "Summer heat peaks between 1pm and 4pm. Plan indoor or shaded stops mid-day — the Acropolis and most ancient sites have very little tree cover." },
+      { category: "practical", tip: "Carry a water bottle and refill often. Tap water is safe and cold drinking fountains are common near archaeological sites." },
+      { category: "practical", tip: "Keep bags close and zipped in Monastiraki, around the Acropolis entrance, and on the metro. Pickpocketing is common in high-tourist areas." },
+      { category: "practical", tip: "Book Acropolis tickets online in advance, especially in summer. The entrance queue can be long and the heat on the hill is significant." },
+      { category: "food", tip: "Athenians rarely eat dinner before 9pm. Restaurants fill between 9:30 and 11pm — arriving early gets you a table and a quieter meal." },
+      { category: "food", tip: "Lunch is the better-value meal. A neighbourhood taverna at midday serves the same kitchen for less than half the dinner price. Look for the hand-written daily specials board." },
+      { category: "transport", tip: "The metro is air-conditioned, cheap, and covers the main areas. Line 2 (red) stops at Acropolis; Line 1 (green) reaches Monastiraki and Thission; Line 3 (blue) runs to Syntagma and the airport." },
+      { category: "transport", tip: "Licensed taxis are yellow. Use the Beat app for reliable metered fares. Airport taxis have fixed rates — confirm before getting in." },
+      { category: "cultural", tip: "Ancient site surfaces — especially the Acropolis — are polished marble and become treacherously slippery when wet. Rubber-soled, close-toed shoes make a genuine difference." },
+      { category: "cultural", tip: "The Acropolis is most beautiful and least crowded in the first hour after opening (8am in summer). The afternoon light is good for photography but the crowds are at their worst." }
+    ]
+  },
   {
     destination: "Paris",
     aliases: ["paris, france"],

@@ -17,7 +17,7 @@ import type { StructuredItinerary } from "@/types/saved-itinerary";
 import type { WalkingNarrative } from "@/types/walking-narrative";
 
 /** Monotonic content version. Bump when any seed data changes. */
-export const CITYSCOUT_CONTENT_VERSION = "1.0.0";
+export const CITYSCOUT_CONTENT_VERSION = "1.1.0";
 
 /**
  * A portable bundle of all contextual content for a single destination.

@@ -1,7 +1,7 @@
 import type { PlaceHistoryMythology } from "@/types/history-mythology";
 
 /** Bump when any story, headline, or reading entry is added, removed, or changed. */
-export const HISTORY_MYTHOLOGY_SEED_VERSION = "1.0.0";
+export const HISTORY_MYTHOLOGY_SEED_VERSION = "1.1.0";
 
 export const historyMythologySeed: PlaceHistoryMythology[] = [
   // -------------------------------------------------------------------------
@@ -88,6 +88,150 @@ export const historyMythologySeed: PlaceHistoryMythology[] = [
     ],
     reading: [
       { title: "The Athenian Agora: A Guide to the Excavation and Museum", author: "American School of Classical Studies", note: "The excavation authority's own guide — thorough and specific." }
+    ]
+  },
+
+  // -------------------------------------------------------------------------
+  // Plaka
+  // -------------------------------------------------------------------------
+  {
+    place: "Plaka",
+    aliases: ["plaka, athens", "plaka neighbourhood", "plaka neighborhood"],
+    stories: [
+      {
+        category: "landmark",
+        headline: "A neighbourhood built on ruins",
+        body: "Plaka is the oldest continuously inhabited neighbourhood in Athens, a district of neoclassical houses and Byzantine churches layered directly over the ancient residential quarters of the city. The streets follow no grid because they follow the ancient paths: the lanes that wound between workshops and houses two and a half thousand years ago are the same lanes tourists navigate today. Beneath almost every basement, excavations have turned up classical-era pottery, coins, or household objects."
+      },
+      {
+        category: "history",
+        headline: "The neighbourhood that survived everything",
+        body: "Plaka endured the Ottoman occupation, the Greek War of Independence, and rapid 20th-century development relatively intact — largely because it was considered too old and chaotic to modernise efficiently. In the 1970s, when parts were threatened with demolition, archaeologists and preservationists argued successfully for its protection. The neighbourhood was pedestrianised and restored in the 1980s. What looks organic and ancient is partly the result of a very deliberate decision to leave it that way."
+      },
+      {
+        category: "mythology",
+        headline: "The Tower of the Winds",
+        body: "At the edge of Plaka stands the Tower of the Winds, an octagonal marble structure built around 50 BC by the astronomer Andronikos. Each of its eight faces is carved with a figure representing a different wind — Boreas (north), Kaikias (northeast), Apeliotes (east), Euros (southeast), Notos (south), Lips (southwest), Zephyros (west), and Skiron (northwest). It housed a water clock that kept time using a hydraulic system. The Ottomans later used it as a tekke for whirling dervishes. The wind figures are still there, still facing their directions."
+      }
+    ],
+    reading: [
+      { title: "Athens: A Cultural and Literary History", author: "Michael Llewellyn Smith", note: "The neighbourhood histories are specific and readable — Plaka features throughout." }
+    ]
+  },
+
+  // -------------------------------------------------------------------------
+  // Monastiraki
+  // -------------------------------------------------------------------------
+  {
+    place: "Monastiraki",
+    aliases: ["monastiraki square", "monastiraki, athens", "monastiraki flea market"],
+    stories: [
+      {
+        category: "landmark",
+        headline: "Three thousand years in one square",
+        body: "Monastiraki square is one of the densest archaeological collisions in the world. A Roman market (the Roman Agora) sits one hundred metres to the east. Below the metro station, excavated during construction in the 1990s, lies a Roman bath complex now visible through glass beneath the concourse. The mosque in the centre of the square was built in 1759 by the Ottoman governor Tzistarakis, who demolished a column from the Temple of Olympian Zeus to make lime for it — an act for which he was dismissed from office."
+      },
+      {
+        category: "history",
+        headline: "The flea market as living archaeology",
+        body: "The Monastiraki flea market has been a trading ground since at least the Ottoman period, when the area was full of textile merchants, leather workers, and copper smiths. After Greek independence, it became the place where the dispossessed sold whatever they had. Today it layers antique dealers, vinyl records, military surplus, Byzantine icons, and tourist souvenirs in a way that mirrors exactly how the city has layered itself. On Sunday mornings, the outdoor market expands and the bargaining becomes more serious."
+      }
+    ]
+  },
+
+  // -------------------------------------------------------------------------
+  // Lycabettus Hill
+  // -------------------------------------------------------------------------
+  {
+    place: "Lycabettus Hill",
+    aliases: ["lycabettus", "lykavittos", "lykavitos hill", "lycabettus", "mount lycabettus"],
+    stories: [
+      {
+        category: "mythology",
+        headline: "The hill Athena dropped",
+        body: "Mythology records that Lycabettus Hill was created by accident. Athena was carrying a great rock to place on the Acropolis when a crow brought her bad news — the details vary by telling. In her shock, she dropped the rock, and it became Lycabettus. The Acropolis was already lower than planned, which is why it looks the way it does. The crow, for its trouble, was punished by having its feathers turned from white to black — making Lycabettus also the origin story of the crow's colour."
+      },
+      {
+        category: "landmark",
+        headline: "The other great hill",
+        body: "At 278 metres, Lycabettus is the highest point in Athens and the only major hill in the city not anchored by ancient ruins. The chapel of St. George at the summit was built in the 19th century and is still active. The funicular railway that carries visitors up was constructed in 1965 and runs through a tunnel cut into the rock. On clear days you can see the Saronic Gulf, the Parthenon directly opposite, and on very clear days, as far as the Peloponnese. Athenians use the hill for evening walks in a way that tourists rarely do."
+      }
+    ]
+  },
+
+  // -------------------------------------------------------------------------
+  // Kerameikos
+  // -------------------------------------------------------------------------
+  {
+    place: "Kerameikos",
+    aliases: ["kerameikos, athens", "keramikos", "ancient kerameikos", "ceramicus"],
+    stories: [
+      {
+        category: "history",
+        headline: "The cemetery where Athens remembers its dead",
+        body: "Kerameikos was Athens' main burial ground from the 12th century BC through the Roman period — over a thousand years of continuous use. The city's most important citizens were buried here: philosophers, generals, politicians, the anonymous dead of the great battles. The grave monuments lining the Street of the Tombs are some of the finest funerary sculpture from the ancient world. The Sacred Way to Eleusis — the processional road walked by initiates into the Eleusinian Mysteries — began at the Kerameikos gate."
+      },
+      {
+        category: "landmark",
+        headline: "Named for the potters",
+        body: "The district takes its name from the ancient potters' quarter — keramos means fired clay, and the ceramics of this neighbourhood gave us the English word 'ceramic'. The area was both a workshop district and a cemetery simultaneously, which seems contradictory until you understand ancient Athenian city planning: the dead were buried outside the city walls, and the walls ran through what is now Kerameikos. The Dipylon Gate nearby was the main ceremonial entrance to the city, through which processions, armies, and merchants all passed."
+      },
+      {
+        category: "mythology",
+        headline: "The Eleusinian road",
+        body: "The Sacred Way began at the Dipylon Gate in Kerameikos and ran fourteen miles to Eleusis, where initiates participated in mysteries dedicated to Demeter and Persephone. The mysteries were among the most closely kept secrets of the ancient world — initiates were forbidden on pain of death from revealing what happened during the rites. We know the route in detail; we know almost nothing about the rituals at the end of it. Cicero called the Eleusinian Mysteries 'the best and most divine thing Athens has ever produced'."
+      }
+    ],
+    reading: [
+      { title: "The Eleusinian and Bacchic Mysteries", author: "Thomas Taylor", note: "A scholarly reconstruction of what may have happened at Eleusis, with the usual caveats about the source problem." }
+    ]
+  },
+
+  // -------------------------------------------------------------------------
+  // National Archaeological Museum
+  // -------------------------------------------------------------------------
+  {
+    place: "National Archaeological Museum",
+    aliases: ["national museum athens", "archaeological museum athens", "national archaeological museum of athens", "ethnikó archaiologikó mouseío"],
+    stories: [
+      {
+        category: "landmark",
+        headline: "The collection that rewrote ancient history",
+        body: "The National Archaeological Museum of Athens, opened in 1891, holds one of the most important collections of ancient artefacts in the world. Room by room, it tells the story of Greece from the Neolithic period through to late antiquity — not as a survey but as a series of specific, extraordinary objects. The gold Mask of Agamemnon (almost certainly not Agamemnon's, but found in Mycenae in a shaft grave by Heinrich Schliemann in 1876). The bronze Artemision Poseidon, cast around 460 BC, balanced mid-throw for over two thousand years before being found on the seabed. The Antikythera Mechanism, the world's first known analogue computer, recovered from a shipwreck in 1901."
+      },
+      {
+        category: "history",
+        headline: "The Antikythera Mechanism",
+        body: "Found in 1901 by sponge divers off the island of Antikythera, the Mechanism is a bronze geared device built around 100 BC that tracked the movements of the sun, moon, and five known planets, predicted solar and lunar eclipses, and displayed the Olympic calendar. It uses differential gearing — a technology not known to have existed until the 1600s. Examination with X-ray tomography in 2006 revealed over 30 interlocking gears and text inscriptions explaining its functions. The device in the museum is the corroded original; reconstructions in the same room show what it likely looked like working."
+      },
+      {
+        category: "mythology",
+        headline: "The Thera frescoes",
+        body: "Among the less-visited rooms in the museum is a gallery of frescoes excavated from Akrotiri on the island of Thera (Santorini) — a Minoan city buried by volcanic eruption around 1627 BC, preserved in ash like Pompeii. The paintings show blue monkeys, boxing children, antelopes, and a famous Spring Fresco of swallows above red lilies. They were made by people whose civilisation was destroyed before the Parthenon was built. Some scholars believe the Thera eruption contributed to the mythology of Atlantis."
+      }
+    ],
+    reading: [
+      { title: "The Antikythera Mechanism: A Calendar Computer from about 80 BC", author: "Derek de Solla Price", note: "The 1974 paper that first established the full complexity of the device." }
+    ]
+  },
+
+  // -------------------------------------------------------------------------
+  // Syntagma
+  // -------------------------------------------------------------------------
+  {
+    place: "Syntagma",
+    aliases: ["syntagma square", "syntagma, athens", "constitution square"],
+    stories: [
+      {
+        category: "history",
+        headline: "The square named for a forced concession",
+        body: "Syntagma means 'constitution'. The square was named in 1843, when King Otto — Bavaria-born ruler of newly independent Greece — was compelled by a military revolt to grant a constitution he had been refusing to issue. The crowd that gathered outside the Royal Palace (now the Parliament building) to demand it was large enough that Otto appeared on the balcony and agreed. The square has been the site of every major political demonstration in Athens since: the events of the 1944 Dekemvriana, the 1973 student uprising, and the austerity protests of 2010–2012 all centred here."
+      },
+      {
+        category: "landmark",
+        headline: "The Evzone guard",
+        body: "The Tomb of the Unknown Soldier, carved into the Parliament building's retaining wall in 1930, is guarded around the clock by Evzones — soldiers of the Presidential Guard. Their ceremonial uniform, the fustanella, derives from the dress of Greek mountain fighters during the War of Independence: a short pleated kilt, white tights, and shoes with large pompoms. The change of guard every hour on the hour is precise and slow, a deliberate ritual pace that reads as tribute rather than performance."
+      }
     ]
   },
 
