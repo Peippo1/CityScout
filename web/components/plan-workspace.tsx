@@ -145,6 +145,7 @@ export function PlanWorkspace({
                     <button
                       key={option.value}
                       type="button"
+                      aria-pressed={active ? "true" : "false"}
                       onClick={() => setStyle(option.value)}
                       className={cn(
                         "rounded-full border px-4 py-2 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background",
@@ -182,6 +183,7 @@ export function PlanWorkspace({
                     <button
                       key={m.value}
                       type="button"
+                      aria-pressed={active ? "true" : "false"}
                       onClick={() => setExplorationMood(active ? null : m.value)}
                       className={cn(
                         "rounded-full border px-4 py-2 text-sm font-medium transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-city-ink/15 focus-visible:ring-offset-2 focus-visible:ring-offset-city-background",
@@ -245,7 +247,7 @@ export function PlanWorkspace({
 
           <Surface
             title="Map preview"
-            description="A quiet placeholder for future markers and route overlays."
+            description="Your route will appear here once stops are confirmed."
           >
             <div className="rounded-[24px] border border-city-border bg-white/55 p-5">
               <div className="grid min-h-[240px] gap-4 rounded-[20px] border border-dashed border-city-border bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(248,246,241,0.85))] p-4 sm:min-h-[300px]">
@@ -258,9 +260,6 @@ export function PlanWorkspace({
                       Saved places
                     </span>
                   </div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-city-muted">
-                    Markers ready
-                  </p>
                 </div>
 
                 <div className="relative flex-1">
@@ -292,8 +291,7 @@ export function PlanWorkspace({
               </div>
             </div>
             <p className="mt-4 max-w-xl text-sm leading-6 text-city-muted">
-              The layout is intentionally shaped for a future map SDK so markers can land without
-              changing the page rhythm.
+              Interactive maps and walking routes are coming. Stops are already positioned and ready.
             </p>
           </Surface>
         </div>
@@ -342,10 +340,7 @@ function GeneratedItinerary({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-city-border pb-4">
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.24em] text-city-muted">
-            Generated itinerary
-          </p>
-          <p className="text-sm text-city-muted">
+          <p className="text-sm font-medium text-city-ink">
             {itinerary.destination}
             {requestId ? (
               <span className="ml-3 text-city-ink/70">Request {requestId}</span>
@@ -425,11 +420,13 @@ function GeneratedItinerary({
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <SummaryCard label="Morning" block={itinerary.morning} />
-        <SummaryCard label="Afternoon" block={itinerary.afternoon} />
-        <SummaryCard label="Evening" block={itinerary.evening} />
-      </div>
+      {!itinerary.stops?.length && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <SummaryCard label="Morning" block={itinerary.morning} />
+          <SummaryCard label="Afternoon" block={itinerary.afternoon} />
+          <SummaryCard label="Evening" block={itinerary.evening} />
+        </div>
+      )}
 
       {itinerary.notes.length > 0 ? (
         <div className="rounded-2xl border border-city-border bg-white/55 p-4">
@@ -517,10 +514,9 @@ function EmptyState() {
   return (
     <div className="grid gap-4">
       <div className="rounded-3xl border border-dashed border-city-border bg-white/55 p-6">
-        <p className="text-sm font-medium text-city-ink">No itinerary generated yet</p>
+        <p className="text-sm font-medium text-city-ink">Nothing planned yet</p>
         <p className="mt-2 text-sm leading-6 text-city-muted">
-          Enter a city, choose a travel style, and generate a draft to see a timeline and route
-          preview.
+          Enter a city, choose a travel style, and generate a draft to see your day take shape.
         </p>
       </div>
       <div className="grid gap-3">

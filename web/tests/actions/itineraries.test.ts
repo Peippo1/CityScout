@@ -28,11 +28,10 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 //      failure, so the page degrades gracefully.
 // ---------------------------------------------------------------------------
 
-const { mockRevalidatePath, mockGetUser, mockCreateClient } = vi.hoisted(() => {
-  const mockGetUser = vi.fn();
+const { mockRevalidatePath, mockCreateClient } = vi.hoisted(() => {
   const mockCreateClient = vi.fn();
   const mockRevalidatePath = vi.fn();
-  return { mockRevalidatePath, mockGetUser, mockCreateClient };
+  return { mockRevalidatePath, mockCreateClient };
 });
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: mockCreateClient }));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition, useState } from "react";
+import { useOptimistic, useTransition } from "react";
 import Link from "next/link";
 import { deleteItinerary } from "@/app/actions/itineraries";
 import { SavedItineraryCard } from "@/components/saved-itinerary-card";

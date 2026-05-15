@@ -80,9 +80,9 @@ export default async function SavedItineraryPage({ params }: PageProps) {
 
       <div className="space-y-8 pb-16">
         {stops.length > 0 ? (
-          <Surface title="Itinerary" description="Stops from this plan.">
+          <Surface title="Itinerary" description="Your plan, stop by stop.">
             <div className="space-y-0">
-              {stops.map((stop, i) => (
+              {stops.map((stop) => (
                 <div
                   key={stop.id}
                   className="flex gap-4 border-t border-city-border py-3 first:border-t-0 first:pt-0"

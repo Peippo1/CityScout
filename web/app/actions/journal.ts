@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isJournalMood } from "@/types/journal";
-import type { CreateJournalEntryInput, JournalEntry, UpdateJournalEntryInput } from "@/types/journal";
+import type { CreateJournalEntryInput, UpdateJournalEntryInput } from "@/types/journal";
 
 export async function createJournalEntry(
   input: CreateJournalEntryInput
